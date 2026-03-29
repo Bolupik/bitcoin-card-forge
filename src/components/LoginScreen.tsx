@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 // Change this before deploy
-const ADMIN_PASSWORD = 'cardforge2024';
+const ADMIN_PASSWORD = 'bolupik';
 
 interface LoginScreenProps {
   onLogin: () => void;
@@ -151,7 +151,7 @@ const LoginScreen = ({ onLogin }: LoginScreenProps) => {
 
         {/* Hint */}
         <p className="text-center mt-5 text-[0.62rem]" style={{ color: 'var(--cf-muted)' }}>
-          Authorized forge masters only · Hint: cardforge2024
+          Authorized forge masters only
         </p>
       </form>
     </div>
