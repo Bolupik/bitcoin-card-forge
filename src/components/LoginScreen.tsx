@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 // Change this before deploy
-const ADMIN_PASSWORD = 'cardforge2024';
+const ADMIN_PASSWORD = 'bolupik';
 
 interface LoginScreenProps {
   onLogin: () => void;
