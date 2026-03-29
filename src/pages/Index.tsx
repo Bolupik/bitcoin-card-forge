@@ -3,6 +3,8 @@ import ParticleField from '@/components/ParticleField';
 import LoginScreen from '@/components/LoginScreen';
 import NavBar from '@/components/NavBar';
 import GalleryPage from '@/components/GalleryPage';
+import ForgePage from '@/components/ForgePage';
+import TradingPage from '@/components/TradingPage';
 import { AppPage, getCards, getTrades, NFTCard, Trade } from '@/lib/cardforge';
 
 const Index = () => {
@@ -41,16 +43,8 @@ const Index = () => {
           tradeCount={trades.length}
         />
         {page === 'gallery' && <GalleryPage cards={cards} trades={trades} />}
-        {page === 'forge' && (
-          <div className="flex items-center justify-center min-h-[60vh]">
-            <h2 className="font-display text-2xl text-gold-gradient">Forge — Coming Next</h2>
-          </div>
-        )}
-        {page === 'trading' && (
-          <div className="flex items-center justify-center min-h-[60vh]">
-            <h2 className="font-display text-2xl text-gold-gradient">Trading — Coming Next</h2>
-          </div>
-        )}
+        {page === 'forge' && <ForgePage cards={cards} trades={trades} onDataChange={refreshData} />}
+        {page === 'trading' && <TradingPage cards={cards} trades={trades} onDataChange={refreshData} />}
       </div>
     </>
   );
