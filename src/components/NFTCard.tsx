@@ -57,11 +57,9 @@ const NFTCardComponent = ({ card, index, showDelete, onDelete, trades = [] }: NF
   return (
     <div
       ref={wrapRef}
-      className="group animate-card-enter"
+      className="group animate-card-enter w-[260px] h-[370px] sm:w-[285px] sm:h-[400px]"
       style={{
         perspective: '1000px',
-        width: 285,
-        height: 400,
         animationDelay: `${index * 0.06}s`,
       }}
       onMouseMove={handleMouseMove}
