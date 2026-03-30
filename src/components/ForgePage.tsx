@@ -162,10 +162,10 @@ const ForgePage = ({ cards, trades, onDataChange }: ForgePageProps) => {
   const tradeCardIds = new Set(trades.map(t => t.cardId));
 
   return (
-    <div className="flex flex-col lg:flex-row min-h-[calc(100vh-64px)]">
+    <div className="flex flex-col lg:flex-row min-h-[calc(100vh-64px)] overflow-x-hidden">
       {/* Sidebar */}
       <div
-        className="w-full lg:w-[368px] lg:sticky lg:top-[64px] lg:h-[calc(100vh-64px)] overflow-y-auto p-7 lg:p-6 shrink-0"
+        className="w-full lg:w-[368px] lg:sticky lg:top-[64px] lg:h-[calc(100vh-64px)] overflow-y-auto p-4 sm:p-6 lg:p-6 shrink-0"
         style={{
           background: 'linear-gradient(180deg, var(--cf-surface), var(--cf-surface2))',
           borderRight: '1px solid var(--cf-border)',
@@ -247,7 +247,7 @@ const ForgePage = ({ cards, trades, onDataChange }: ForgePageProps) => {
 
         {/* Section: Battle Stats */}
         <SectionLabel text="Battle Stats" />
-        <div className="grid grid-cols-5 gap-1 mb-3">
+        <div className="grid grid-cols-5 gap-1 mb-3 overflow-x-auto">
           {(Object.keys(stats) as (keyof CardStats)[]).map((key) => (
             <div
               key={key}
