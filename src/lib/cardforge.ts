@@ -32,7 +32,8 @@ export interface Trade {
   createdAt: string;
 }
 
-export type AppPage = 'gallery' | 'forge' | 'trading';
+export type AppPage = 'gallery' | 'trading';
+export type AdminPage = 'forge' | 'trading' | 'gallery';
 
 export const ELEMENTS = [
   '⚡ ELECTRIC', '🔥 FIRE', '🌊 WATER', '🌿 NATURE',

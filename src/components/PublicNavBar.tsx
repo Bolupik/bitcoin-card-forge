@@ -1,16 +1,14 @@
-import { AdminPage } from '@/lib/cardforge';
+import { AppPage } from '@/lib/cardforge';
 
-interface NavBarProps {
-  activePage: AdminPage;
-  onNavigate: (page: AdminPage) => void;
-  onLogout: () => void;
+interface PublicNavBarProps {
+  activePage: AppPage;
+  onNavigate: (page: AppPage) => void;
   tradeCount: number;
 }
 
-const NavBar = ({ activePage, onNavigate, onLogout, tradeCount }: NavBarProps) => {
-  const tabs: { page: AdminPage; label: string; icon?: string }[] = [
+const PublicNavBar = ({ activePage, onNavigate, tradeCount }: PublicNavBarProps) => {
+  const tabs: { page: AppPage; label: string; icon?: string }[] = [
     { page: 'gallery', label: 'Gallery' },
-    { page: 'forge', label: 'Forge', icon: '⚒' },
     { page: 'trading', label: 'Trading', icon: '⇄' },
   ];
 
@@ -33,7 +31,6 @@ const NavBar = ({ activePage, onNavigate, onLogout, tradeCount }: NavBarProps) =
         className="font-display text-lg font-bold text-gold-gradient transition-all duration-300 hover:drop-shadow-[0_0_16px_rgba(200,168,75,0.5)] shrink-0"
       >
         CardForge
-        <span className="font-ui text-[0.5rem] ml-1.5 px-1.5 py-0.5 rounded text-red-400 border border-red-400/30 align-middle">ADMIN</span>
       </button>
 
       <div className="flex-1 flex justify-center gap-1">
@@ -53,8 +50,7 @@ const NavBar = ({ activePage, onNavigate, onLogout, tradeCount }: NavBarProps) =
               onMouseLeave={(e) => { if (!active) e.currentTarget.style.color = 'var(--cf-muted2)'; }}
             >
               {icon && <span className="mr-1">{icon}</span>}
-              <span className="hidden sm:inline">{label}</span>
-              <span className="sm:hidden">{icon || label.charAt(0)}</span>
+              {label}
               {active && (
                 <div
                   className="absolute -bottom-[1px] left-[20%] right-[20%] h-[2px]"
@@ -72,17 +68,20 @@ const NavBar = ({ activePage, onNavigate, onLogout, tradeCount }: NavBarProps) =
         })}
       </div>
 
+      {/* Wallet Connect placeholder */}
       <button
-        onClick={onLogout}
         className="font-ui text-xs px-3 py-1.5 rounded-md border transition-all duration-200 shrink-0"
-        style={{ color: 'var(--cf-muted2)', borderColor: 'var(--cf-border2)' }}
-        onMouseEnter={(e) => { e.currentTarget.style.color = '#ff6b6b'; e.currentTarget.style.borderColor = 'rgba(255,107,107,0.4)'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--cf-muted2)'; e.currentTarget.style.borderColor = 'var(--cf-border2)'; }}
+        style={{
+          color: 'var(--cf-gold)',
+          borderColor: 'rgba(200,168,75,0.3)',
+          background: 'rgba(200,168,75,0.06)',
+        }}
+        onClick={() => alert('Wallet connect coming soon!')}
       >
-        Logout
+        🔗 Connect Wallet
       </button>
     </nav>
   );
 };
 
-export default NavBar;
+export default PublicNavBar;
