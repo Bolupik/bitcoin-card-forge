@@ -7,16 +7,17 @@ interface PublicNavBarProps {
 }
 
 const PublicNavBar = ({ activePage, onNavigate, tradeCount }: PublicNavBarProps) => {
-  const tabs: { page: AppPage; label: string; icon?: string }[] = [
-    { page: 'gallery', label: 'Gallery' },
-    { page: 'trading', label: 'Trading', icon: '⇄' },
+  const tabs: { page: AppPage; label: string; icon?: string; mobileLabel?: string }[] = [
+    { page: 'gallery', label: 'Gallery', icon: '🎴', mobileLabel: '🎴' },
+    { page: 'mint', label: 'Mint', icon: '⚡', mobileLabel: '⚡' },
+    { page: 'trading', label: 'Trading', icon: '⇄', mobileLabel: '⇄' },
   ];
 
   return (
     <nav
-      className="sticky top-0 z-50 h-16 flex items-center px-4 md:px-6"
+      className="sticky top-0 z-50 h-14 sm:h-16 flex items-center px-3 sm:px-4 md:px-6"
       style={{
-        background: 'rgba(5,5,14,0.88)',
+        background: 'rgba(5,5,14,0.92)',
         backdropFilter: 'blur(20px) saturate(1.5)',
         borderBottom: '1px solid var(--cf-border)',
       }}
@@ -26,31 +27,35 @@ const PublicNavBar = ({ activePage, onNavigate, tradeCount }: PublicNavBarProps)
         style={{ background: 'linear-gradient(90deg, transparent, rgba(200,168,75,0.18), transparent)' }}
       />
 
+      {/* Logo */}
       <button
         onClick={() => onNavigate('gallery')}
-        className="font-display text-lg font-bold text-gold-gradient transition-all duration-300 hover:drop-shadow-[0_0_16px_rgba(200,168,75,0.5)] shrink-0"
+        className="font-display text-base sm:text-lg font-bold text-gold-gradient transition-all duration-300 hover:drop-shadow-[0_0_16px_rgba(200,168,75,0.5)] shrink-0"
       >
-        CardForge
+        <span className="hidden sm:inline">CardForge</span>
+        <span className="sm:hidden">CF</span>
       </button>
 
-      <div className="flex-1 flex justify-center gap-1">
-        {tabs.map(({ page, label, icon }) => {
+      {/* Center Tabs */}
+      <div className="flex-1 flex justify-center gap-0.5 sm:gap-1">
+        {tabs.map(({ page, label, icon, mobileLabel }) => {
           const active = activePage === page;
           return (
             <button
               key={page}
               onClick={() => onNavigate(page)}
-              className="relative font-ui text-xs md:text-sm font-semibold px-3 md:px-5 py-2 rounded-md transition-all duration-200"
+              className="relative font-ui text-xs sm:text-sm font-semibold px-2.5 sm:px-4 md:px-5 py-1.5 sm:py-2 rounded-md transition-all duration-300"
               style={{
                 color: active ? 'var(--cf-gold)' : 'var(--cf-muted2)',
                 background: active ? 'rgba(200,168,75,0.07)' : 'transparent',
                 border: active ? '1px solid rgba(200,168,75,0.22)' : '1px solid transparent',
+                transform: active ? 'scale(1.05)' : 'scale(1)',
               }}
               onMouseEnter={(e) => { if (!active) e.currentTarget.style.color = 'var(--cf-text)'; }}
-              onMouseLeave={(e) => { if (!active) e.currentTarget.style.color = 'var(--cf-muted2)'; }}
+              onMouseLeave={(e) => { if (!active) e.currentTarget.style.color = active ? 'var(--cf-gold)' : 'var(--cf-muted2)'; }}
             >
-              {icon && <span className="mr-1">{icon}</span>}
-              {label}
+              {icon && <span className="mr-0 sm:mr-1">{icon}</span>}
+              <span className="hidden sm:inline">{label}</span>
               {active && (
                 <div
                   className="absolute -bottom-[1px] left-[20%] right-[20%] h-[2px]"
@@ -59,7 +64,7 @@ const PublicNavBar = ({ activePage, onNavigate, tradeCount }: PublicNavBarProps)
               )}
               {page === 'trading' && tradeCount > 0 && (
                 <span
-                  className="absolute top-[5px] right-[7px] w-1.5 h-1.5 rounded-full animate-pulse-dot"
+                  className="absolute top-[3px] right-[5px] sm:top-[5px] sm:right-[7px] w-1.5 h-1.5 rounded-full animate-pulse-dot"
                   style={{ background: 'var(--cf-gold)', boxShadow: '0 0 6px rgba(200,168,75,0.6)' }}
                 />
               )}
@@ -68,17 +73,19 @@ const PublicNavBar = ({ activePage, onNavigate, tradeCount }: PublicNavBarProps)
         })}
       </div>
 
-      {/* Wallet Connect placeholder */}
+      {/* Wallet Connect */}
       <button
-        className="font-ui text-xs px-3 py-1.5 rounded-md border transition-all duration-200 shrink-0"
+        className="font-ui text-[0.6rem] sm:text-xs px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg border transition-all duration-300 shrink-0 hover:-translate-y-0.5 active:scale-95"
         style={{
           color: 'var(--cf-gold)',
           borderColor: 'rgba(200,168,75,0.3)',
           background: 'rgba(200,168,75,0.06)',
+          boxShadow: '0 2px 10px rgba(200,168,75,0.1)',
         }}
         onClick={() => alert('Wallet connect coming soon!')}
       >
-        🔗 Connect Wallet
+        <span className="hidden sm:inline">🔗 Connect Wallet</span>
+        <span className="sm:hidden">🔗 Connect</span>
       </button>
     </nav>
   );

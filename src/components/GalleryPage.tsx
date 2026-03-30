@@ -51,7 +51,7 @@ const GalleryPage = ({ cards, trades }: GalleryPageProps) => {
   return (
     <div className="relative">
       {/* Hero */}
-      <section className="relative overflow-hidden text-center" style={{ padding: '88px 20px 68px' }}>
+      <section className="relative overflow-hidden text-center px-4" style={{ padding: 'clamp(40px, 10vw, 88px) 16px clamp(30px, 8vw, 68px)' }}>
         {/* Ghost watermark */}
         <span
           className="absolute pointer-events-none font-display font-black select-none"
@@ -129,7 +129,7 @@ const GalleryPage = ({ cards, trades }: GalleryPageProps) => {
             {i > 0 && (
               <div className="w-px self-stretch my-[22%]" style={{ background: 'linear-gradient(transparent, var(--cf-border), transparent)' }} />
             )}
-            <div className="flex flex-col items-center px-4 py-[22px] max-w-[160px]">
+            <div className="flex flex-col items-center px-3 sm:px-4 py-3 sm:py-[22px] max-w-[160px]">
               <span
                 className="font-display text-lg md:text-[1.75rem] font-bold text-gold-gradient"
               >
@@ -168,7 +168,7 @@ const GalleryPage = ({ cards, trades }: GalleryPageProps) => {
       </div>
 
       {/* Card Grid */}
-      <div className="flex flex-wrap justify-center gap-8 max-w-[1300px] mx-auto" style={{ padding: '44px 24px 100px' }}>
+      <div className="flex flex-wrap justify-center gap-4 sm:gap-8 max-w-[1300px] mx-auto card-grid-responsive" style={{ padding: '44px 24px 100px' }}>
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center py-20">
             <span className="text-6xl opacity-[0.22] mb-4">{empty.emoji}</span>
