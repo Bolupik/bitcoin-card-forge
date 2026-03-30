@@ -64,7 +64,7 @@ const TradingPage = ({ cards, trades, onDataChange }: TradingPageProps) => {
   };
 
   return (
-    <div className="max-w-[1080px] mx-auto px-6 md:px-10 py-12 md:py-[50px]">
+    <div className="max-w-[1080px] mx-auto px-4 sm:px-6 md:px-10 py-8 md:py-[50px]">
       {/* Hero */}
       <div className="text-center mb-12">
         <span
@@ -159,7 +159,52 @@ const TradingPage = ({ cards, trades, onDataChange }: TradingPageProps) => {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full">
+            {/* Mobile card layout */}
+            <div className="block md:hidden">
+              {trades.map((t) => (
+                <div key={t.id} className="p-4 flex flex-col gap-3" style={{ borderBottom: '1px solid var(--cf-border)' }}>
+                  <div className="flex items-center gap-3">
+                    {t.imageUrl && <img src={t.imageUrl} alt="" className="w-[36px] h-[50px] object-cover rounded shrink-0" />}
+                    <div className="flex-1 min-w-0">
+                      <span className="font-body text-xs block truncate" style={{ color: 'var(--cf-text)' }}>{t.cardName}</span>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ background: dotColor[t.rarity] || 'var(--cf-muted)' }} />
+                        <span className="font-ui text-[0.55rem] capitalize" style={{ color: 'var(--cf-muted2)' }}>{t.rarity}</span>
+                        <span className="font-ui text-[0.55rem] px-2 py-0.5 rounded-full ml-auto" style={{
+                          background: t.status === 'active' ? 'rgba(74,222,128,0.1)' : t.status === 'pending' ? 'rgba(251,191,36,0.1)' : 'rgba(100,100,130,0.1)',
+                          color: t.status === 'active' ? '#4ade80' : t.status === 'pending' ? '#fbbf24' : 'var(--cf-muted)',
+                          border: `1px solid ${t.status === 'active' ? 'rgba(74,222,128,0.2)' : t.status === 'pending' ? 'rgba(251,191,36,0.2)' : 'var(--cf-border)'}`,
+                        }}>
+                          {t.status === 'hold' ? 'On Hold' : t.status === 'active' ? 'Active' : 'Pending'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="font-body text-[0.6rem]" style={{ color: 'var(--cf-muted2)' }}>Wants: {t.asking}</span>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => toggleStatus(t.id)}
+                        className="font-ui text-[0.55rem] px-2 py-1 rounded transition-colors"
+                        style={{ border: '1px solid var(--cf-border2)', color: 'var(--cf-muted2)' }}
+                      >
+                        {t.status === 'active' ? 'Pause' : 'Activate'}
+                      </button>
+                      <button
+                        onClick={() => removeTrade(t.id)}
+                        className="font-ui text-[0.55rem] px-2 py-1 rounded transition-colors hover:text-red-400 hover:border-red-400/30"
+                        style={{ border: '1px solid var(--cf-border2)', color: 'var(--cf-muted2)' }}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop table */}
+            <table className="w-full hidden md:table">
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--cf-border)' }}>
                   {['Card', 'Rarity', 'Asking For', 'Status', 'Listed', 'Actions'].map(h => (
