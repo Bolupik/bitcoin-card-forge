@@ -17,7 +17,7 @@ const PREMADE_CARDS: {
     rarity: 'common',
     element: '🔥 FIRE',
     imageEmoji: '🔥',
-    price: '0.5 STX',
+    price: '1 STX',
   },
   {
     name: 'Aqua Sentinel',
@@ -25,7 +25,7 @@ const PREMADE_CARDS: {
     rarity: 'common',
     element: '🌊 WATER',
     imageEmoji: '🌊',
-    price: '0.5 STX',
+    price: '1 STX',
   },
   {
     name: 'Thornweaver',
@@ -33,7 +33,7 @@ const PREMADE_CARDS: {
     rarity: 'rare',
     element: '🌿 NATURE',
     imageEmoji: '🌿',
-    price: '1.2 STX',
+    price: '1 STX',
   },
   {
     name: 'Voltclaw',
@@ -41,7 +41,7 @@ const PREMADE_CARDS: {
     rarity: 'rare',
     element: '⚡ ELECTRIC',
     imageEmoji: '⚡',
-    price: '1.2 STX',
+    price: '1 STX',
   },
   {
     name: 'Voidwalker',
@@ -49,7 +49,7 @@ const PREMADE_CARDS: {
     rarity: 'epic',
     element: '🌑 DARK',
     imageEmoji: '🌑',
-    price: '3.5 STX',
+    price: '1 STX',
   },
   {
     name: 'Mindshatter',
@@ -57,7 +57,7 @@ const PREMADE_CARDS: {
     rarity: 'epic',
     element: '✨ PSYCHIC',
     imageEmoji: '✨',
-    price: '3.5 STX',
+    price: '1 STX',
   },
   {
     name: 'Obsidian Titan',
@@ -65,7 +65,7 @@ const PREMADE_CARDS: {
     rarity: 'legendary',
     element: '🏔️ EARTH',
     imageEmoji: '🏔️',
-    price: '10 STX',
+    price: '1 STX',
   },
   {
     name: 'Soul Reaver',
@@ -73,7 +73,7 @@ const PREMADE_CARDS: {
     rarity: 'legendary',
     element: '💀 SHADOW',
     imageEmoji: '💀',
-    price: '10 STX',
+    price: '1 STX',
   },
 ];
 
