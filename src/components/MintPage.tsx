@@ -49,7 +49,7 @@ const PREMADE_CARDS: {
     rarity: 'epic',
     element: '🌑 DARK',
     imageEmoji: '🌑',
-    price: '3.5 STX',
+    price: '1 STX',
   },
   {
     name: 'Mindshatter',
@@ -57,7 +57,7 @@ const PREMADE_CARDS: {
     rarity: 'epic',
     element: '✨ PSYCHIC',
     imageEmoji: '✨',
-    price: '3.5 STX',
+    price: '1 STX',
   },
   {
     name: 'Obsidian Titan',
