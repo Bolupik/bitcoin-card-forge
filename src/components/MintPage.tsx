@@ -1,150 +1,119 @@
-import { useState, useEffect } from 'react';
-import { NFTCard, Rarity, generateStats, ELEMENTS, getCards, saveCards } from '@/lib/cardforge';
+import { useState, useEffect, useRef } from 'react';
+import { NFTCard, Rarity, generateStats, getCards, saveCards } from '@/lib/cardforge';
 import NFTCardComponent from './NFTCard';
 
-// Pre-made card templates available for public minting
-const PREMADE_CARDS: {
-  name: string;
-  description: string;
-  rarity: Rarity;
-  element: string;
-  imageEmoji: string;
-  price: string;
-}[] = [
-  {
-    name: 'Ember Sprite',
-    description: 'A tiny flame spirit born from volcanic ash. Its warmth can melt steel.',
-    rarity: 'common',
-    element: '🔥 FIRE',
-    imageEmoji: '🔥',
-    price: '1 STX',
-  },
-  {
-    name: 'Aqua Sentinel',
-    description: 'Guardian of the deep currents. Commands tidal forces with a gesture.',
-    rarity: 'common',
-    element: '🌊 WATER',
-    imageEmoji: '🌊',
-    price: '1 STX',
-  },
-  {
-    name: 'Thornweaver',
-    description: 'Ancient dryad who weaves living barriers from enchanted brambles.',
-    rarity: 'rare',
-    element: '🌿 NATURE',
-    imageEmoji: '🌿',
-    price: '1 STX',
-  },
-  {
-    name: 'Voltclaw',
-    description: 'Lightning-infused predator. Each strike leaves a trail of plasma.',
-    rarity: 'rare',
-    element: '⚡ ELECTRIC',
-    imageEmoji: '⚡',
-    price: '1 STX',
-  },
-  {
-    name: 'Voidwalker',
-    description: 'Phase-shifting entity from beyond the veil. Reality bends in its wake.',
-    rarity: 'epic',
-    element: '🌑 DARK',
-    imageEmoji: '🌑',
-    price: '1 STX',
-  },
-  {
-    name: 'Mindshatter',
-    description: 'Psychic colossus whose thoughts manifest as devastating force waves.',
-    rarity: 'epic',
-    element: '✨ PSYCHIC',
-    imageEmoji: '✨',
-    price: '1 STX',
-  },
-  {
-    name: 'Obsidian Titan',
-    description: 'Mountain-born colossus forged in the planet\'s core. Unstoppable.',
-    rarity: 'legendary',
-    element: '🏔️ EARTH',
-    imageEmoji: '🏔️',
-    price: '1 STX',
-  },
-  {
-    name: 'Soul Reaver',
-    description: 'The final arbiter. Harvests essence from the defeated to grow stronger.',
-    rarity: 'legendary',
-    element: '💀 SHADOW',
-    imageEmoji: '💀',
-    price: '1 STX',
-  },
+const TEMPLATES = [
+  { name: 'Ember Sprite', description: 'A tiny flame spirit born from volcanic ash. Its warmth can melt steel.', rarity: 'common' as Rarity, element: '🔥 FIRE', emoji: '🔥' },
+  { name: 'Aqua Sentinel', description: 'Guardian of the deep currents. Commands tidal forces with a gesture.', rarity: 'common' as Rarity, element: '🌊 WATER', emoji: '🌊' },
+  { name: 'Thornweaver', description: 'Ancient dryad who weaves living barriers from enchanted brambles.', rarity: 'rare' as Rarity, element: '🌿 NATURE', emoji: '🌿' },
+  { name: 'Voltclaw', description: 'Lightning-infused predator. Each strike leaves a trail of plasma.', rarity: 'rare' as Rarity, element: '⚡ ELECTRIC', emoji: '⚡' },
+  { name: 'Voidwalker', description: 'Phase-shifting entity from beyond the veil. Reality bends in its wake.', rarity: 'epic' as Rarity, element: '🌑 DARK', emoji: '🌑' },
+  { name: 'Mindshatter', description: 'Psychic colossus whose thoughts manifest as devastating force waves.', rarity: 'epic' as Rarity, element: '✨ PSYCHIC', emoji: '✨' },
+  { name: 'Obsidian Titan', description: "Mountain-born colossus forged in the planet's core. Unstoppable.", rarity: 'legendary' as Rarity, element: '🏔️ EARTH', emoji: '🏔️' },
+  { name: 'Soul Reaver', description: 'The final arbiter. Harvests essence from the defeated to grow stronger.', rarity: 'legendary' as Rarity, element: '💀 SHADOW', emoji: '💀' },
 ];
 
-const RARITY_COLORS: Record<Rarity, { border: string; bg: string; text: string; glow: string }> = {
-  common: { border: 'rgba(160,190,215,0.3)', bg: 'rgba(160,190,215,0.04)', text: '#b8cfe0', glow: 'rgba(160,190,215,0.1)' },
-  rare: { border: 'rgba(60,140,255,0.3)', bg: 'rgba(60,140,255,0.04)', text: '#88c4ff', glow: 'rgba(60,140,255,0.15)' },
-  epic: { border: 'rgba(160,60,240,0.3)', bg: 'rgba(160,60,240,0.04)', text: '#d870ff', glow: 'rgba(160,60,240,0.15)' },
-  legendary: { border: 'rgba(240,180,20,0.3)', bg: 'rgba(240,180,20,0.04)', text: '#ffe860', glow: 'rgba(240,180,20,0.2)' },
+const RARITY_GLOW: Record<Rarity, string> = {
+  common: 'rgba(160,190,215,0.4)',
+  rare: 'rgba(60,140,255,0.5)',
+  epic: 'rgba(160,60,240,0.5)',
+  legendary: 'rgba(240,180,20,0.6)',
 };
 
 const MintPage = () => {
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [minting, setMinting] = useState(false);
+  const [rolling, setRolling] = useState(false);
+  const [rollingIndex, setRollingIndex] = useState(0);
   const [mintedCard, setMintedCard] = useState<NFTCard | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [visibleCards, setVisibleCards] = useState<number[]>([]);
+  const [particles, setParticles] = useState<{ id: number; x: number; y: number; delay: number }[]>([]);
+  const rollInterval = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [mintCount, setMintCount] = useState(() => getCards().length);
 
-  // Staggered entrance animation
+  // Floating particles
   useEffect(() => {
-    PREMADE_CARDS.forEach((_, i) => {
-      setTimeout(() => setVisibleCards(prev => [...prev, i]), i * 80);
-    });
+    setParticles(Array.from({ length: 20 }, (_, i) => ({
+      id: i,
+      x: Math.random() * 100,
+      y: Math.random() * 100,
+      delay: Math.random() * 5,
+    })));
   }, []);
 
-  const handleMint = async (index: number) => {
-    const template = PREMADE_CARDS[index];
+  const handleMint = async () => {
+    if (minting) return;
     setMinting(true);
+    setRolling(true);
+    setMintedCard(null);
 
-    // Simulate minting delay
-    await new Promise(r => setTimeout(r, 2000));
+    // Slot-machine roll effect
+    let speed = 60;
+    let count = 0;
+    const totalRolls = 25;
 
-    const cards = getCards();
-    const card: NFTCard = {
-      id: crypto.randomUUID(),
-      name: template.name,
-      description: template.description,
-      rarity: template.rarity,
-      stats: generateStats(template.rarity),
-      element: template.element,
-      imageUrl: '',
-      metadataUrl: '',
-      serial: cards.length + 1,
-      createdAt: new Date().toISOString(),
-    };
+    rollInterval.current = setInterval(() => {
+      setRollingIndex(Math.floor(Math.random() * TEMPLATES.length));
+      count++;
+      if (count >= totalRolls) {
+        if (rollInterval.current) clearInterval(rollInterval.current);
+        // Final pick
+        const finalIndex = Math.floor(Math.random() * TEMPLATES.length);
+        setRollingIndex(finalIndex);
+        setRolling(false);
 
-    cards.push(card);
-    saveCards(cards);
-    setMintedCard(card);
-    setMinting(false);
-    setShowSuccess(true);
+        const template = TEMPLATES[finalIndex];
+        const cards = getCards();
+        const card: NFTCard = {
+          id: crypto.randomUUID(),
+          name: template.name,
+          description: template.description,
+          rarity: template.rarity,
+          stats: generateStats(template.rarity),
+          element: template.element,
+          imageUrl: '',
+          metadataUrl: '',
+          serial: cards.length + 1,
+          createdAt: new Date().toISOString(),
+        };
+        cards.push(card);
+        saveCards(cards);
+        setMintedCard(card);
+        setMintCount(cards.length);
+        setMinting(false);
 
-    setTimeout(() => {
-      setShowSuccess(false);
-      setMintedCard(null);
-      setSelectedIndex(null);
-    }, 4000);
+        setTimeout(() => setShowSuccess(true), 300);
+      }
+    }, speed);
   };
 
-  const selected = selectedIndex !== null ? PREMADE_CARDS[selectedIndex] : null;
+  const currentTemplate = TEMPLATES[rollingIndex];
 
   return (
-    <div className="relative min-h-[calc(100vh-64px)]">
+    <div className="relative min-h-screen overflow-hidden">
+      {/* Ambient particles */}
+      {particles.map(p => (
+        <div
+          key={p.id}
+          className="absolute w-1 h-1 rounded-full pointer-events-none opacity-20"
+          style={{
+            left: `${p.x}%`,
+            top: `${p.y}%`,
+            background: 'var(--cf-gold)',
+            animation: `float-gentle ${3 + p.delay}s ease-in-out infinite`,
+            animationDelay: `${p.delay}s`,
+          }}
+        />
+      ))}
+
       {/* Hero */}
-      <section className="relative overflow-hidden text-center px-4" style={{ padding: '60px 16px 40px' }}>
+      <section className="relative text-center px-4 pt-12 sm:pt-20 pb-8">
         <span
           className="absolute pointer-events-none font-display font-black select-none"
           style={{
             top: '50%', left: '50%', transform: 'translate(-50%, -58%)',
-            fontSize: 'clamp(3rem, 12vw, 10rem)',
+            fontSize: 'clamp(3rem, 14vw, 12rem)',
             color: 'transparent',
-            WebkitTextStroke: '1px rgba(200,168,75,0.04)',
+            WebkitTextStroke: '1px rgba(200,168,75,0.03)',
           }}
         >
           MINT
@@ -152,14 +121,10 @@ const MintPage = () => {
 
         <div
           className="inline-flex items-center gap-2 font-ui text-[0.55rem] font-semibold uppercase tracking-[0.35em] px-4 py-1.5 rounded-[20px] mb-5 animate-card-enter"
-          style={{
-            border: '1px solid rgba(200,168,75,0.2)',
-            color: 'var(--cf-gold)',
-            animationDelay: '0.1s',
-          }}
+          style={{ border: '1px solid rgba(200,168,75,0.2)', color: 'var(--cf-gold)' }}
         >
           <span className="animate-pulse-dot">⚡</span>
-          Genesis Mint · Limited Collection
+          Genesis Mint · Random Drop
           <span className="animate-pulse-dot">⚡</span>
         </div>
 
@@ -171,207 +136,207 @@ const MintPage = () => {
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             filter: 'drop-shadow(0 0 30px rgba(200,168,75,0.3))',
-            animationDelay: '0.2s',
+            animationDelay: '0.15s',
           }}
         >
-          Mint Your Card
+          Forge Your Destiny
         </h1>
 
         <p
           className="font-body text-sm mx-auto leading-[1.8] max-w-[420px] mb-2 animate-card-enter"
-          style={{ color: 'var(--cf-muted2)', animationDelay: '0.3s' }}
+          style={{ color: 'var(--cf-muted2)', animationDelay: '0.25s' }}
         >
-          Choose from pre-made Genesis cards. Each mint generates unique battle stats. Connect your wallet to mint on-chain.
+          Each mint randomly selects a card from the Genesis pool.
+          Stats are uniquely generated — no two cards are alike.
         </p>
 
         <div className="w-[80px] h-[2px] mx-auto mt-4" style={{ background: 'linear-gradient(90deg, transparent, var(--cf-gold), transparent)' }} />
       </section>
 
-      {/* Cards Grid */}
-      <section className="px-4 sm:px-6 pb-8 max-w-[1200px] mx-auto">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          {PREMADE_CARDS.map((card, i) => {
-            const rc = RARITY_COLORS[card.rarity];
-            const isVisible = visibleCards.includes(i);
-            const isSelected = selectedIndex === i;
-
-            return (
-              <button
-                key={i}
-                onClick={() => setSelectedIndex(isSelected ? null : i)}
-                className="relative text-left rounded-2xl p-4 sm:p-5 transition-all duration-500 group overflow-hidden"
-                style={{
-                  background: isSelected
-                    ? `linear-gradient(145deg, ${rc.bg}, rgba(13,13,26,0.95))`
-                    : 'linear-gradient(145deg, var(--cf-surface), var(--cf-surface2))',
-                  border: `1.5px solid ${isSelected ? rc.border : 'var(--cf-border)'}`,
-                  boxShadow: isSelected
-                    ? `0 8px 40px ${rc.glow}, inset 0 1px 0 rgba(255,255,255,0.04)`
-                    : '0 4px 20px rgba(0,0,0,0.3)',
-                  opacity: isVisible ? 1 : 0,
-                  transform: isVisible
-                    ? (isSelected ? 'translateY(-4px) scale(1.02)' : 'translateY(0) scale(1)')
-                    : 'translateY(20px) scale(0.95)',
-                  transitionTimingFunction: 'cubic-bezier(0.17, 0.67, 0.35, 1.1)',
-                }}
-              >
-                {/* Top accent line */}
-                <div
-                  className="absolute top-0 left-0 right-0 h-[2px] transition-opacity duration-300"
-                  style={{
-                    background: `linear-gradient(90deg, transparent, ${rc.text}, transparent)`,
-                    opacity: isSelected ? 1 : 0,
-                  }}
-                />
-
-                {/* Shimmer on hover */}
-                <div
-                  className="absolute inset-0 rounded-2xl pointer-events-none transition-opacity duration-500"
-                  style={{
-                    background: 'linear-gradient(115deg, transparent 30%, rgba(255,255,255,0.03) 50%, transparent 70%)',
-                    opacity: isSelected ? 1 : 0,
-                  }}
-                />
-
-                {/* Card emoji + rarity */}
-                <div className="flex items-start justify-between mb-3">
-                  <span
-                    className="text-3xl sm:text-4xl transition-transform duration-500"
-                    style={{ transform: isSelected ? 'scale(1.15) rotate(-5deg)' : 'scale(1) rotate(0)', filter: isSelected ? `drop-shadow(0 0 12px ${rc.glow})` : 'none' }}
-                  >
-                    {card.imageEmoji}
-                  </span>
-                  <span
-                    className="font-ui text-[0.5rem] font-bold uppercase px-2 py-0.5 rounded-full"
-                    style={{ border: `1px solid ${rc.border}`, color: rc.text }}
-                  >
-                    {card.rarity}
-                  </span>
-                </div>
-
-                {/* Name + element */}
-                <h3 className="font-display text-sm sm:text-base mb-1 transition-colors duration-300" style={{ color: isSelected ? rc.text : 'var(--cf-text)' }}>
-                  {card.name}
-                </h3>
-                <span className="font-ui text-[0.55rem] mb-2 block" style={{ color: 'var(--cf-muted2)' }}>
-                  {card.element}
-                </span>
-
-                {/* Description */}
-                <p className="font-body text-[0.6rem] leading-relaxed mb-4" style={{ color: 'var(--cf-muted)' }}>
-                  {card.description}
-                </p>
-
-                {/* Price + mint indicator */}
-                <div className="flex items-center justify-between">
-                  <span className="font-display text-sm font-bold" style={{ color: 'var(--cf-gold)' }}>
-                    {card.price}
-                  </span>
-                  <span
-                    className="font-ui text-[0.55rem] px-2.5 py-1 rounded-full transition-all duration-300"
-                    style={{
-                      background: isSelected ? `${rc.text}15` : 'rgba(200,168,75,0.06)',
-                      border: `1px solid ${isSelected ? rc.border : 'rgba(200,168,75,0.15)'}`,
-                      color: isSelected ? rc.text : 'var(--cf-muted2)',
-                    }}
-                  >
-                    {isSelected ? '✦ Selected' : 'Select'}
-                  </span>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* Mint Action Panel - slides up when card selected */}
-      <div
-        className="sticky bottom-0 left-0 right-0 z-40 transition-all duration-500"
-        style={{
-          transform: selected ? 'translateY(0)' : 'translateY(100%)',
-          opacity: selected ? 1 : 0,
-          pointerEvents: selected ? 'auto' : 'none',
-        }}
-      >
+      {/* Mint Machine */}
+      <section className="flex flex-col items-center px-4 pb-20">
+        {/* Roll Display */}
         <div
-          className="mx-auto max-w-[600px] rounded-t-2xl p-4 sm:p-6"
+          className="relative w-[280px] sm:w-[340px] h-[160px] sm:h-[200px] rounded-2xl flex flex-col items-center justify-center overflow-hidden mb-8 transition-all duration-500"
           style={{
-            background: 'linear-gradient(180deg, rgba(13,13,26,0.98), rgba(5,5,14,0.99))',
-            border: '1px solid var(--cf-border2)',
-            borderBottom: 'none',
-            backdropFilter: 'blur(20px)',
-            boxShadow: '0 -10px 40px rgba(0,0,0,0.5)',
+            background: 'linear-gradient(145deg, var(--cf-surface), var(--cf-surface2))',
+            border: `2px solid ${rolling ? 'var(--cf-gold)' : 'var(--cf-border)'}`,
+            boxShadow: rolling
+              ? `0 0 60px ${RARITY_GLOW[currentTemplate.rarity]}, inset 0 0 30px rgba(0,0,0,0.5)`
+              : '0 8px 40px rgba(0,0,0,0.4)',
           }}
         >
-          {selected && (
-            <div className="flex items-center gap-4">
-              <span className="text-3xl">{selected.imageEmoji}</span>
-              <div className="flex-1 min-w-0">
-                <h4 className="font-display text-sm truncate" style={{ color: RARITY_COLORS[selected.rarity].text }}>
-                  {selected.name}
-                </h4>
-                <span className="font-ui text-[0.6rem]" style={{ color: 'var(--cf-muted2)' }}>
-                  {selected.price} · {selected.rarity.charAt(0).toUpperCase() + selected.rarity.slice(1)}
-                </span>
-              </div>
-              <button
-                onClick={() => handleMint(selectedIndex!)}
-                disabled={minting}
-                className="relative font-display text-xs sm:text-sm font-bold px-5 sm:px-8 py-2.5 sm:py-3 rounded-xl overflow-hidden transition-all duration-300 hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed shrink-0"
-                style={{
-                  background: 'linear-gradient(135deg, #a07828, #f0d060, #c8a84b, #fff0a0, #c8a84b)',
-                  backgroundSize: '300% 100%',
-                  color: 'var(--cf-bg)',
-                  boxShadow: '0 4px 20px rgba(200,168,75,0.3)',
-                }}
-              >
-                {minting ? (
-                  <span className="flex items-center gap-2">
-                    <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                    Minting...
-                  </span>
-                ) : (
-                  '⚡ Mint Now'
-                )}
-              </button>
-            </div>
+          {/* Scan line */}
+          {rolling && (
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                background: 'linear-gradient(180deg, transparent 40%, rgba(200,168,75,0.06) 50%, transparent 60%)',
+                animation: 'sweep 0.8s linear infinite',
+              }}
+            />
+          )}
+
+          <span
+            className="text-5xl sm:text-6xl mb-2 transition-all duration-150"
+            style={{
+              transform: rolling ? 'scale(1.2)' : 'scale(1)',
+              filter: rolling ? `drop-shadow(0 0 20px ${RARITY_GLOW[currentTemplate.rarity]})` : 'none',
+              animation: rolling ? 'shake 0.3s ease-in-out infinite' : 'none',
+            }}
+          >
+            {currentTemplate.emoji}
+          </span>
+
+          <span
+            className="font-display text-sm sm:text-base font-bold transition-all duration-150"
+            style={{
+              color: rolling ? 'var(--cf-text)' : 'var(--cf-muted2)',
+              opacity: rolling ? 0.6 : 1,
+            }}
+          >
+            {rolling ? '???' : (mintedCard ? mintedCard.name : 'Ready to Mint')}
+          </span>
+
+          {!rolling && mintedCard && (
+            <span
+              className="font-ui text-[0.55rem] uppercase mt-1 px-2 py-0.5 rounded-full animate-card-enter"
+              style={{
+                border: `1px solid ${RARITY_GLOW[mintedCard.rarity]}`,
+                color: mintedCard.rarity === 'legendary' ? '#ffe860' : mintedCard.rarity === 'epic' ? '#d870ff' : mintedCard.rarity === 'rare' ? '#88c4ff' : '#b8cfe0',
+              }}
+            >
+              {mintedCard.rarity}
+            </span>
           )}
         </div>
-      </div>
 
-      {/* Wallet not connected hint */}
-      <div className="text-center pb-20 px-4">
+        {/* Stats row */}
+        <div className="flex items-center gap-6 mb-8">
+          <div className="text-center">
+            <span className="font-display text-2xl font-bold text-gold-gradient">{mintCount}</span>
+            <span className="block font-ui text-[0.5rem] uppercase tracking-widest" style={{ color: 'var(--cf-muted)' }}>Minted</span>
+          </div>
+          <div className="w-px h-8" style={{ background: 'var(--cf-border)' }} />
+          <div className="text-center">
+            <span className="font-display text-2xl font-bold text-gold-gradient">{TEMPLATES.length}</span>
+            <span className="block font-ui text-[0.5rem] uppercase tracking-widest" style={{ color: 'var(--cf-muted)' }}>In Pool</span>
+          </div>
+          <div className="w-px h-8" style={{ background: 'var(--cf-border)' }} />
+          <div className="text-center">
+            <span className="font-display text-2xl font-bold text-gold-gradient">∞</span>
+            <span className="block font-ui text-[0.5rem] uppercase tracking-widest" style={{ color: 'var(--cf-muted)' }}>Supply</span>
+          </div>
+        </div>
+
+        {/* Mint button */}
+        <button
+          onClick={handleMint}
+          disabled={minting}
+          className="group relative font-display text-base sm:text-lg font-bold px-10 sm:px-14 py-3.5 sm:py-4 rounded-2xl overflow-hidden transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_8px_40px_rgba(200,168,75,0.4)] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+          style={{
+            background: 'linear-gradient(135deg, #a07828, #f0d060, #c8a84b, #fff0a0, #c8a84b)',
+            backgroundSize: '300% 100%',
+            animation: !minting ? 'shimmer 4s ease-in-out infinite' : 'none',
+            color: 'var(--cf-bg)',
+            boxShadow: '0 4px 30px rgba(200,168,75,0.3)',
+          }}
+        >
+          {/* Sweep effect */}
+          <div
+            className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+            style={{
+              background: 'linear-gradient(115deg, transparent 20%, rgba(255,255,255,0.2) 50%, transparent 80%)',
+              backgroundSize: '200%',
+              animation: 'shimmer 2s linear infinite',
+            }}
+          />
+          {minting ? (
+            <span className="flex items-center gap-3">
+              <span className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+              Rolling...
+            </span>
+          ) : (
+            <span className="flex items-center gap-2">
+              <span className="text-xl group-hover:animate-shake">🎲</span>
+              Random Mint
+            </span>
+          )}
+        </button>
+
+        {/* Wallet hint */}
         <div
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl animate-card-enter"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl mt-8 animate-card-enter"
           style={{
             background: 'rgba(200,168,75,0.04)',
             border: '1px solid rgba(200,168,75,0.12)',
-            animationDelay: '0.5s',
+            animationDelay: '0.4s',
           }}
         >
           <span className="text-sm">🔗</span>
           <span className="font-body text-[0.65rem]" style={{ color: 'var(--cf-muted2)' }}>
-            Connect your wallet to mint cards on the Stacks blockchain
+            Connect wallet to mint on Stacks blockchain
           </span>
         </div>
-      </div>
+
+        {/* Recent pool preview */}
+        <div className="mt-12 w-full max-w-[600px]">
+          <h3 className="font-display text-xs text-center mb-4" style={{ color: 'var(--cf-muted2)' }}>
+            Genesis Pool
+          </h3>
+          <div className="grid grid-cols-4 gap-2">
+            {TEMPLATES.map((t, i) => (
+              <div
+                key={i}
+                className="flex flex-col items-center p-3 rounded-xl transition-all duration-300 hover:scale-105 hover:-translate-y-1 cursor-default"
+                style={{
+                  background: 'var(--cf-surface)',
+                  border: '1px solid var(--cf-border)',
+                }}
+              >
+                <span className="text-xl mb-1">{t.emoji}</span>
+                <span className="font-ui text-[0.45rem] text-center truncate w-full" style={{ color: 'var(--cf-muted2)' }}>
+                  {t.name}
+                </span>
+                <span
+                  className="font-ui text-[0.4rem] uppercase mt-0.5"
+                  style={{
+                    color: t.rarity === 'legendary' ? '#ffe860' : t.rarity === 'epic' ? '#d870ff' : t.rarity === 'rare' ? '#88c4ff' : '#b8cfe0',
+                  }}
+                >
+                  {t.rarity}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {/* Success overlay */}
       {showSuccess && mintedCard && (
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center"
-          style={{ background: 'rgba(5,5,14,0.92)', backdropFilter: 'blur(12px)' }}
-          onClick={() => { setShowSuccess(false); setMintedCard(null); setSelectedIndex(null); }}
+          style={{ background: 'rgba(5,5,14,0.94)', backdropFilter: 'blur(16px)' }}
+          onClick={() => { setShowSuccess(false); setMintedCard(null); }}
         >
           <div className="flex flex-col items-center animate-card-enter" onClick={e => e.stopPropagation()}>
+            {/* Radial burst */}
+            <div
+              className="absolute w-[400px] h-[400px] rounded-full pointer-events-none animate-spin-slow opacity-20"
+              style={{
+                background: `conic-gradient(from 0deg, transparent, ${RARITY_GLOW[mintedCard.rarity]}, transparent, ${RARITY_GLOW[mintedCard.rarity]}, transparent)`,
+              }}
+            />
             <h2
-              className="font-display text-2xl sm:text-3xl font-black mb-6 text-gold-gradient"
+              className="font-display text-2xl sm:text-3xl font-black mb-6 text-gold-gradient relative z-10"
               style={{ filter: 'drop-shadow(0 0 30px rgba(200,168,75,0.4))' }}
             >
               ✦ Card Minted!
             </h2>
-            <NFTCardComponent card={mintedCard} index={0} trades={[]} />
-            <p className="font-body text-xs mt-6" style={{ color: 'var(--cf-muted2)' }}>
+            <div className="relative z-10">
+              <NFTCardComponent card={mintedCard} index={0} trades={[]} />
+            </div>
+            <p className="font-body text-xs mt-6 relative z-10 animate-pulse" style={{ color: 'var(--cf-muted2)' }}>
               Tap anywhere to dismiss
             </p>
           </div>
