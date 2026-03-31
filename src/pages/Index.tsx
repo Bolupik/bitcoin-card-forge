@@ -21,7 +21,7 @@ const Index = () => {
         onNavigate={(p) => { setPage(p); if (p === 'gallery') refreshCards(); }}
         tradeCount={trades.filter(t => t.status === 'active').length}
       />
-      <main className="relative z-10 flex-1 pb-16 sm:pb-0">
+      <main className="relative z-10 flex-1 pb-20 sm:pb-0 overflow-hidden">
         <div className="animate-page-transition" key={page}>
           {page === 'gallery' && <GalleryPage cards={cards} trades={trades} />}
           {page === 'mint' && <MintPage />}
