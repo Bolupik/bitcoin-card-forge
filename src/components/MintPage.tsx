@@ -65,7 +65,7 @@ const PREMADE_CARDS: {
     rarity: 'legendary',
     element: '🏔️ EARTH',
     imageEmoji: '🏔️',
-    price: '10 STX',
+    price: '1 STX',
   },
   {
     name: 'Soul Reaver',
@@ -73,7 +73,7 @@ const PREMADE_CARDS: {
     rarity: 'legendary',
     element: '💀 SHADOW',
     imageEmoji: '💀',
-    price: '10 STX',
+    price: '1 STX',
   },
 ];
 
