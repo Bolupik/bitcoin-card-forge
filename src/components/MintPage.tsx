@@ -33,7 +33,7 @@ const PREMADE_CARDS: {
     rarity: 'rare',
     element: '🌿 NATURE',
     imageEmoji: '🌿',
-    price: '1.2 STX',
+    price: '1 STX',
   },
   {
     name: 'Voltclaw',
@@ -41,7 +41,7 @@ const PREMADE_CARDS: {
     rarity: 'rare',
     element: '⚡ ELECTRIC',
     imageEmoji: '⚡',
-    price: '1.2 STX',
+    price: '1 STX',
   },
   {
     name: 'Voidwalker',
