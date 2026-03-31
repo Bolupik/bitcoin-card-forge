@@ -17,7 +17,7 @@ const PREMADE_CARDS: {
     rarity: 'common',
     element: '🔥 FIRE',
     imageEmoji: '🔥',
-    price: '0.5 STX',
+    price: '1 STX',
   },
   {
     name: 'Aqua Sentinel',
@@ -25,7 +25,7 @@ const PREMADE_CARDS: {
     rarity: 'common',
     element: '🌊 WATER',
     imageEmoji: '🌊',
-    price: '0.5 STX',
+    price: '1 STX',
   },
   {
     name: 'Thornweaver',
