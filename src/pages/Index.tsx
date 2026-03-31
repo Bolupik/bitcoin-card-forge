@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import ParticleField from '@/components/ParticleField';
-import PublicNavBar from '@/components/PublicNavBar';
+import AppSidebar from '@/components/AppSidebar';
 import GalleryPage from '@/components/GalleryPage';
 import PublicTradingPage from '@/components/PublicTradingPage';
 import MintPage from '@/components/MintPage';
@@ -14,21 +14,21 @@ const Index = () => {
   const refreshCards = useCallback(() => setCards(getCards()), []);
 
   return (
-    <>
+    <div className="flex min-h-screen">
       <ParticleField />
-      <div className="relative z-10">
-        <PublicNavBar
-          activePage={page}
-          onNavigate={(p) => { setPage(p); if (p === 'gallery') refreshCards(); }}
-          tradeCount={trades.filter(t => t.status === 'active').length}
-        />
+      <AppSidebar
+        activePage={page}
+        onNavigate={(p) => { setPage(p); if (p === 'gallery') refreshCards(); }}
+        tradeCount={trades.filter(t => t.status === 'active').length}
+      />
+      <main className="relative z-10 flex-1 pb-16 sm:pb-0">
         <div className="animate-page-transition" key={page}>
           {page === 'gallery' && <GalleryPage cards={cards} trades={trades} />}
           {page === 'mint' && <MintPage />}
           {page === 'trading' && <PublicTradingPage cards={cards} trades={trades} />}
         </div>
-      </div>
-    </>
+      </main>
+    </div>
   );
 };
 
