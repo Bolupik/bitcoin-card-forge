@@ -60,6 +60,7 @@ const MintPage = () => {
   const [rollEmoji, setRollEmoji] = useState('🎴');
   const rollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [mintCount, setMintCount] = useState(() => getCards().length);
+  const [recentMints, setRecentMints] = useState<NFTCard[]>(() => getCards().slice(-10).reverse());
 
   const emojis = ['🔥', '🌊', '⚡', '🌿', '🌑', '✨', '🏔️', '💀', '🎴', '⚔️'];
 
