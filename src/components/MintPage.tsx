@@ -357,6 +357,74 @@ const MintPage = () => {
             </div>
           ))}
         </div>
+
+        {/* Mint History */}
+        {recentMints.length > 0 && (
+          <div className="w-full max-w-[600px] mt-14 px-2">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-1 h-5 rounded-full" style={{ background: 'linear-gradient(180deg, var(--cf-gold), transparent)' }} />
+              <h2 className="font-display text-sm font-bold" style={{ color: 'var(--cf-text)' }}>
+                Recent Mints
+              </h2>
+              <span className="font-ui text-[0.5rem] uppercase tracking-wider px-2 py-0.5 rounded-full" style={{ color: 'var(--cf-muted)', border: '1px solid var(--cf-border)' }}>
+                {recentMints.length}
+              </span>
+            </div>
+            <div className="space-y-2">
+              {recentMints.map((card, i) => (
+                <div
+                  key={card.id}
+                  className="flex items-center gap-3 p-3 rounded-xl transition-all duration-300 hover:scale-[1.01] animate-card-enter"
+                  style={{
+                    background: 'var(--cf-surface)',
+                    border: `1px solid ${RARITY_COLOR[card.rarity].border}`,
+                    boxShadow: `0 0 12px ${RARITY_COLOR[card.rarity].glow}`,
+                    animationDelay: `${i * 0.05}s`,
+                  }}
+                >
+                  {/* Element emoji */}
+                  <div
+                    className="w-9 h-9 rounded-lg flex items-center justify-center text-lg shrink-0"
+                    style={{ background: 'var(--cf-surface2)', border: '1px solid var(--cf-border)' }}
+                  >
+                    {card.element.split(' ')[0]}
+                  </div>
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-display text-xs font-bold truncate" style={{ color: RARITY_COLOR[card.rarity].text }}>
+                        {card.name}
+                      </span>
+                      <span
+                        className="font-ui text-[0.4rem] uppercase font-bold px-1.5 py-0.5 rounded-full shrink-0"
+                        style={{ border: `1px solid ${RARITY_COLOR[card.rarity].border}`, color: RARITY_COLOR[card.rarity].text }}
+                      >
+                        {card.rarity}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3 mt-0.5">
+                      <span className="font-mono text-[0.5rem]" style={{ color: 'var(--cf-muted)' }}>
+                        #{card.serial.toString().padStart(4, '0')}
+                      </span>
+                      <span className="font-ui text-[0.45rem] uppercase" style={{ color: 'var(--cf-muted)' }}>
+                        {card.element}
+                      </span>
+                    </div>
+                  </div>
+                  {/* Stats summary */}
+                  <div className="flex gap-1.5 shrink-0">
+                    {(['ATK', 'DEF', 'HP'] as const).map(stat => (
+                      <div key={stat} className="text-center">
+                        <div className="font-ui text-[0.35rem] uppercase" style={{ color: 'var(--cf-muted)' }}>{stat}</div>
+                        <div className="font-mono text-[0.55rem] font-bold" style={{ color: 'var(--cf-text)' }}>{card.stats[stat]}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Success overlay */}
