@@ -107,6 +107,7 @@ const MintPage = () => {
         playReveal();
         setMintedCard(card);
         setMintCount(cards.length);
+        setRecentMints(cards.slice(-10).reverse());
         setPhase('reveal');
 
         setTimeout(() => {
