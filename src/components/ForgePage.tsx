@@ -34,6 +34,41 @@ const ForgePage = ({ onDataChange }: ForgePageProps) => {
   const fileRef = useRef<HTMLInputElement>(null);
   const [templates, setTemplates] = useState<CardTemplate[]>(() => getTemplates());
   const [config, setConfig] = useState(() => getCollectionConfig());
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  const startEdit = (t: CardTemplate) => {
+    setEditingId(t.id);
+    setName(t.name);
+    setDescription(t.description);
+    setRarity(t.rarity);
+    setStats(t.stats);
+    setImageUrl(t.imageUrl);
+    setSupply(t.supply);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setName('');
+    setDescription('');
+    setRarity('common');
+    setStats(generateStats('common'));
+    setImageUrl('');
+    setSupply(500);
+  };
+
+  const saveEdit = () => {
+    if (!editingId || !name.trim()) return;
+    const all = getTemplates();
+    const idx = all.findIndex(t => t.id === editingId);
+    if (idx === -1) return;
+    const t = all[idx];
+    const newSupply = Math.max(supply, t.minted); // can't go below already minted
+    all[idx] = { ...t, name: name.trim(), description: description.trim(), rarity, stats, imageUrl, supply: newSupply };
+    saveTemplates(all);
+    setTemplates(all);
+    cancelEdit();
+    onDataChange();
+  };
 
   useEffect(() => {
     if (pinataJwt) localStorage.setItem('cf_pinata', pinataJwt);
@@ -355,20 +390,44 @@ const ForgePage = ({ onDataChange }: ForgePageProps) => {
           </p>
         </div>
 
-        {/* Forge Button */}
-        <button
-          onClick={forgeTemplate}
-          disabled={!name.trim() || !imageUrl || supply > remainingSlots || supply < 1}
-          className="relative w-full py-3 font-display text-sm font-bold tracking-wider rounded-lg overflow-hidden transition-all duration-300 hover:-translate-y-0.5 disabled:opacity-40 disabled:cursor-not-allowed"
-          style={{
-            background: 'linear-gradient(135deg, #a07828, #f0d060, #c8a84b, #fff0a0, #c8a84b)',
-            backgroundSize: '300% 100%',
-            color: 'var(--cf-bg)',
-            boxShadow: '0 4px 20px rgba(200,168,75,0.3)',
-          }}
-        >
-          ⚒ Forge Template ({supply} copies)
-        </button>
+        {/* Forge / Save Edit Button */}
+        {editingId ? (
+          <div className="flex gap-2 w-full">
+            <button
+              onClick={saveEdit}
+              disabled={!name.trim()}
+              className="flex-1 py-3 font-display text-sm font-bold tracking-wider rounded-lg overflow-hidden transition-all duration-300 hover:-translate-y-0.5 disabled:opacity-40"
+              style={{
+                background: 'linear-gradient(135deg, #a07828, #f0d060, #c8a84b)',
+                color: 'var(--cf-bg)',
+                boxShadow: '0 4px 20px rgba(200,168,75,0.3)',
+              }}
+            >
+              ✓ Save Changes
+            </button>
+            <button
+              onClick={cancelEdit}
+              className="px-4 py-3 font-display text-sm rounded-lg transition-all duration-200"
+              style={{ border: '1px solid var(--cf-border2)', color: 'var(--cf-muted2)' }}
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={forgeTemplate}
+            disabled={!name.trim() || !imageUrl || supply > remainingSlots || supply < 1}
+            className="relative w-full py-3 font-display text-sm font-bold tracking-wider rounded-lg overflow-hidden transition-all duration-300 hover:-translate-y-0.5 disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{
+              background: 'linear-gradient(135deg, #a07828, #f0d060, #c8a84b, #fff0a0, #c8a84b)',
+              backgroundSize: '300% 100%',
+              color: 'var(--cf-bg)',
+              boxShadow: '0 4px 20px rgba(200,168,75,0.3)',
+            }}
+          >
+            ⚒ Forge Template ({supply} copies)
+          </button>
+        )}
       </div>
 
       {/* Right Panel — Template Library */}
@@ -438,14 +497,23 @@ const ForgePage = ({ onDataChange }: ForgePageProps) => {
                     </div>
                   </div>
 
-                  {/* Delete */}
-                  <button
-                    onClick={() => { if (confirm(`Delete template "${t.name}"?`)) deleteTemplate(t.id); }}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 font-ui text-xs px-2 py-1 rounded"
-                    style={{ color: '#f87171' }}
-                  >
-                    ✕
-                  </button>
+                  {/* Actions */}
+                  <div className="flex gap-1 shrink-0">
+                    <button
+                      onClick={() => startEdit(t)}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 font-ui text-xs px-2 py-1 rounded"
+                      style={{ color: 'var(--cf-gold)' }}
+                    >
+                      ✎
+                    </button>
+                    <button
+                      onClick={() => { if (confirm(`Delete template "${t.name}"?`)) deleteTemplate(t.id); }}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 font-ui text-xs px-2 py-1 rounded"
+                      style={{ color: '#f87171' }}
+                    >
+                      ✕
+                    </button>
+                  </div>
                 </div>
               );
             })}
