@@ -43,7 +43,7 @@ const Admin = () => {
           tradeCount={trades.length}
         />
         {page === 'gallery' && <GalleryPage cards={cards} trades={trades} />}
-        {page === 'forge' && <ForgePage cards={cards} trades={trades} onDataChange={refreshData} />}
+        {page === 'forge' && <ForgePage onDataChange={refreshData} />}
         {page === 'trading' && <TradingPage cards={cards} trades={trades} onDataChange={refreshData} />}
       </div>
     </>

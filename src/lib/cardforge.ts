@@ -8,8 +8,23 @@ export interface CardStats {
   HP: number;
 }
 
+export interface CardTemplate {
+  id: string;
+  name: string;
+  description: string;
+  rarity: Rarity;
+  stats: CardStats;
+  element: string;
+  imageUrl: string;
+  metadataUrl: string;
+  supply: number;      // total copies available
+  minted: number;      // how many have been minted
+  createdAt: string;
+}
+
 export interface NFTCard {
   id: string;
+  templateId: string;  // links back to the template
   name: string;
   description: string;
   rarity: Rarity;
@@ -30,6 +45,10 @@ export interface Trade {
   asking: string;
   status: 'hold' | 'active' | 'pending';
   createdAt: string;
+}
+
+export interface CollectionConfig {
+  totalSupply: number;
 }
 
 export type AppPage = 'gallery' | 'trading' | 'mint';
@@ -61,6 +80,16 @@ export const generateStats = (rarity: Rarity): CardStats => {
   };
 };
 
+// Templates (admin-created card blueprints)
+export const getTemplates = (): CardTemplate[] => {
+  try { return JSON.parse(localStorage.getItem('cf_templates_v1') || '[]'); }
+  catch { return []; }
+};
+
+export const saveTemplates = (templates: CardTemplate[]) =>
+  localStorage.setItem('cf_templates_v1', JSON.stringify(templates));
+
+// Minted cards
 export const getCards = (): NFTCard[] => {
   try { return JSON.parse(localStorage.getItem('cardforge_v2') || '[]'); }
   catch { return []; }
@@ -69,6 +98,7 @@ export const getCards = (): NFTCard[] => {
 export const saveCards = (cards: NFTCard[]) =>
   localStorage.setItem('cardforge_v2', JSON.stringify(cards));
 
+// Trades
 export const getTrades = (): Trade[] => {
   try { return JSON.parse(localStorage.getItem('cf_trades_v1') || '[]'); }
   catch { return []; }
@@ -76,3 +106,55 @@ export const getTrades = (): Trade[] => {
 
 export const saveTrades = (trades: Trade[]) =>
   localStorage.setItem('cf_trades_v1', JSON.stringify(trades));
+
+// Collection config
+export const getCollectionConfig = (): CollectionConfig => {
+  try {
+    const raw = localStorage.getItem('cf_config_v1');
+    return raw ? JSON.parse(raw) : { totalSupply: 1000 };
+  } catch { return { totalSupply: 1000 }; }
+};
+
+export const saveCollectionConfig = (config: CollectionConfig) =>
+  localStorage.setItem('cf_config_v1', JSON.stringify(config));
+
+// Mint a random card from available templates
+export const mintFromPool = (): { card: NFTCard; template: CardTemplate } | null => {
+  const templates = getTemplates();
+  const available = templates.filter(t => t.minted < t.supply);
+  if (available.length === 0) return null;
+
+  // Weighted by remaining supply
+  const totalRemaining = available.reduce((s, t) => s + (t.supply - t.minted), 0);
+  let roll = Math.random() * totalRemaining;
+  let chosen = available[0];
+  for (const t of available) {
+    roll -= (t.supply - t.minted);
+    if (roll <= 0) { chosen = t; break; }
+  }
+
+  const cards = getCards();
+  const card: NFTCard = {
+    id: crypto.randomUUID(),
+    templateId: chosen.id,
+    name: chosen.name,
+    description: chosen.description,
+    rarity: chosen.rarity,
+    stats: chosen.stats,
+    element: chosen.element,
+    imageUrl: chosen.imageUrl,
+    metadataUrl: chosen.metadataUrl,
+    serial: cards.length + 1,
+    createdAt: new Date().toISOString(),
+  };
+
+  // Update template minted count
+  chosen.minted += 1;
+  saveTemplates(templates);
+
+  // Save minted card
+  cards.push(card);
+  saveCards(cards);
+
+  return { card, template: chosen };
+};
