@@ -34,6 +34,41 @@ const ForgePage = ({ onDataChange }: ForgePageProps) => {
   const fileRef = useRef<HTMLInputElement>(null);
   const [templates, setTemplates] = useState<CardTemplate[]>(() => getTemplates());
   const [config, setConfig] = useState(() => getCollectionConfig());
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  const startEdit = (t: CardTemplate) => {
+    setEditingId(t.id);
+    setName(t.name);
+    setDescription(t.description);
+    setRarity(t.rarity);
+    setStats(t.stats);
+    setImageUrl(t.imageUrl);
+    setSupply(t.supply);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setName('');
+    setDescription('');
+    setRarity('common');
+    setStats(generateStats('common'));
+    setImageUrl('');
+    setSupply(500);
+  };
+
+  const saveEdit = () => {
+    if (!editingId || !name.trim()) return;
+    const all = getTemplates();
+    const idx = all.findIndex(t => t.id === editingId);
+    if (idx === -1) return;
+    const t = all[idx];
+    const newSupply = Math.max(supply, t.minted); // can't go below already minted
+    all[idx] = { ...t, name: name.trim(), description: description.trim(), rarity, stats, imageUrl, supply: newSupply };
+    saveTemplates(all);
+    setTemplates(all);
+    cancelEdit();
+    onDataChange();
+  };
 
   useEffect(() => {
     if (pinataJwt) localStorage.setItem('cf_pinata', pinataJwt);
