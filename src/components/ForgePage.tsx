@@ -497,14 +497,23 @@ const ForgePage = ({ onDataChange }: ForgePageProps) => {
                     </div>
                   </div>
 
-                  {/* Delete */}
-                  <button
-                    onClick={() => { if (confirm(`Delete template "${t.name}"?`)) deleteTemplate(t.id); }}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 font-ui text-xs px-2 py-1 rounded"
-                    style={{ color: '#f87171' }}
-                  >
-                    ✕
-                  </button>
+                  {/* Actions */}
+                  <div className="flex gap-1 shrink-0">
+                    <button
+                      onClick={() => startEdit(t)}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 font-ui text-xs px-2 py-1 rounded"
+                      style={{ color: 'var(--cf-gold)' }}
+                    >
+                      ✎
+                    </button>
+                    <button
+                      onClick={() => { if (confirm(`Delete template "${t.name}"?`)) deleteTemplate(t.id); }}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 font-ui text-xs px-2 py-1 rounded"
+                      style={{ color: '#f87171' }}
+                    >
+                      ✕
+                    </button>
+                  </div>
                 </div>
               );
             })}
