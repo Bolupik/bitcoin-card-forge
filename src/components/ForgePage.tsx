@@ -1,10 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
-import { NFTCard, Trade, Rarity, generateStats, CardStats, ELEMENTS, getCards, saveCards, getTrades } from '@/lib/cardforge';
-import NFTCardComponent from './NFTCard';
+import { CardTemplate, Rarity, generateStats, CardStats, ELEMENTS, getTemplates, saveTemplates, getCollectionConfig, saveCollectionConfig } from '@/lib/cardforge';
 
 interface ForgePageProps {
-  cards: NFTCard[];
-  trades: Trade[];
   onDataChange: () => void;
 }
 
@@ -22,10 +19,11 @@ const rarityColor = (r: Rarity) => {
   return m[r];
 };
 
-const ForgePage = ({ cards, trades, onDataChange }: ForgePageProps) => {
+const ForgePage = ({ onDataChange }: ForgePageProps) => {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [rarity, setRarity] = useState<Rarity>('common');
+  const [supply, setSupply] = useState(500);
   const [stats, setStats] = useState<CardStats>(() => generateStats('common'));
   const [imageUrl, setImageUrl] = useState('');
   const [dragOver, setDragOver] = useState(false);
@@ -34,6 +32,8 @@ const ForgePage = ({ cards, trades, onDataChange }: ForgePageProps) => {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [templates, setTemplates] = useState<CardTemplate[]>(() => getTemplates());
+  const [config, setConfig] = useState(() => getCollectionConfig());
 
   useEffect(() => {
     if (pinataJwt) localStorage.setItem('cf_pinata', pinataJwt);
@@ -63,11 +63,19 @@ const ForgePage = ({ cards, trades, onDataChange }: ForgePageProps) => {
     }
   };
 
-  const forgeCard = async () => {
-    if (!name.trim()) return;
-    if (!imageUrl) return;
+  const totalAllocated = templates.reduce((s, t) => s + t.supply, 0);
+  const remainingSlots = config.totalSupply - totalAllocated;
 
-    const serial = getCards().length + 1;
+  const updateTotalSupply = (val: number) => {
+    const newConfig = { ...config, totalSupply: Math.max(val, totalAllocated) };
+    setConfig(newConfig);
+    saveCollectionConfig(newConfig);
+  };
+
+  const forgeTemplate = async () => {
+    if (!name.trim() || !imageUrl) return;
+    if (supply > remainingSlots) return;
+
     const element = ELEMENTS[Math.floor(Math.random() * ELEMENTS.length)];
     let finalImageUrl = imageUrl;
     let metadataUrl = '';
@@ -76,8 +84,6 @@ const ForgePage = ({ cards, trades, onDataChange }: ForgePageProps) => {
       try {
         setUploading(true);
         setUploadProgress(10);
-
-        // Upload image
         const blob = await fetch(imageUrl).then(r => r.blob());
         const formData = new FormData();
         formData.append('file', blob, `${name}.png`);
@@ -90,7 +96,6 @@ const ForgePage = ({ cards, trades, onDataChange }: ForgePageProps) => {
         finalImageUrl = `https://gateway.pinata.cloud/ipfs/${imgData.IpfsHash}`;
         setUploadProgress(60);
 
-        // Upload metadata
         const metaRes = await fetch('https://api.pinata.cloud/pinning/pinJSONToIPFS', {
           method: 'POST',
           headers: {
@@ -98,7 +103,7 @@ const ForgePage = ({ cards, trades, onDataChange }: ForgePageProps) => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            pinataContent: { name, description, rarity, stats, element, image: finalImageUrl, serial, collection: 'CardForge Genesis' },
+            pinataContent: { name, description, rarity, stats, element, image: finalImageUrl, supply, collection: 'CardForge Genesis' },
             pinataMetadata: { name },
           }),
         });
@@ -112,7 +117,7 @@ const ForgePage = ({ cards, trades, onDataChange }: ForgePageProps) => {
       }
     }
 
-    const card: NFTCard = {
+    const template: CardTemplate = {
       id: crypto.randomUUID(),
       name: name.trim(),
       description: description.trim(),
@@ -121,45 +126,34 @@ const ForgePage = ({ cards, trades, onDataChange }: ForgePageProps) => {
       element,
       imageUrl: finalImageUrl,
       metadataUrl,
-      serial,
+      supply,
+      minted: 0,
       createdAt: new Date().toISOString(),
     };
 
-    const allCards = getCards();
-    allCards.push(card);
-    saveCards(allCards);
+    const all = getTemplates();
+    all.push(template);
+    saveTemplates(all);
+    setTemplates(all);
 
     // Reset form
     setName('');
     setDescription('');
     setImageUrl('');
     setRarity('common');
+    setSupply(500);
     setStats(generateStats('common'));
     setUploading(false);
     setUploadProgress(0);
     onDataChange();
   };
 
-  const deleteCard = (id: string) => {
-    const updated = getCards().filter(c => c.id !== id);
-    saveCards(updated);
+  const deleteTemplate = (id: string) => {
+    const updated = getTemplates().filter(t => t.id !== id);
+    saveTemplates(updated);
+    setTemplates(updated);
     onDataChange();
   };
-
-  const previewCard: NFTCard = {
-    id: 'preview',
-    name: name || 'Card Name',
-    description: description || 'Card description...',
-    rarity,
-    stats,
-    element: '⚡ ELECTRIC',
-    imageUrl,
-    metadataUrl: '',
-    serial: getCards().length + 1,
-    createdAt: new Date().toISOString(),
-  };
-
-  const tradeCardIds = new Set(trades.map(t => t.cardId));
 
   return (
     <div className="flex flex-col lg:flex-row min-h-[calc(100vh-64px)] overflow-x-hidden">
@@ -171,7 +165,29 @@ const ForgePage = ({ cards, trades, onDataChange }: ForgePageProps) => {
           borderRight: '1px solid var(--cf-border)',
         }}
       >
-        {/* Section: Card Art */}
+        {/* Collection Config */}
+        <SectionLabel text="Collection Config" />
+        <div className="flex items-center gap-3 mb-5">
+          <label className="font-ui text-[0.55rem] uppercase tracking-wider shrink-0" style={{ color: 'var(--cf-muted2)' }}>
+            Total Supply
+          </label>
+          <input
+            type="number"
+            min={totalAllocated}
+            value={config.totalSupply}
+            onChange={(e) => updateTotalSupply(Number(e.target.value))}
+            className="flex-1 bg-transparent font-mono text-sm py-1.5 px-3 rounded-lg outline-none transition-colors duration-200"
+            style={{ border: '1px solid var(--cf-border2)', color: 'var(--cf-gold)' }}
+          />
+        </div>
+        <div className="flex items-center justify-between mb-5 px-3 py-2 rounded-lg" style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid var(--cf-border)' }}>
+          <span className="font-ui text-[0.5rem] uppercase" style={{ color: 'var(--cf-muted)' }}>Allocated</span>
+          <span className="font-mono text-xs" style={{ color: totalAllocated >= config.totalSupply ? '#f87171' : 'var(--cf-text)' }}>
+            {totalAllocated} / {config.totalSupply}
+          </span>
+        </div>
+
+        {/* Card Art */}
         <SectionLabel text="Card Art" />
         <div
           className="relative rounded-xl mb-5 flex flex-col items-center justify-center cursor-pointer transition-all duration-300"
@@ -197,7 +213,7 @@ const ForgePage = ({ cards, trades, onDataChange }: ForgePageProps) => {
           )}
         </div>
 
-        {/* Section: Card Identity */}
+        {/* Card Identity */}
         <SectionLabel text="Card Identity" />
         <input
           type="text"
@@ -221,7 +237,40 @@ const ForgePage = ({ cards, trades, onDataChange }: ForgePageProps) => {
           onBlur={(e) => { e.target.style.borderColor = 'var(--cf-border2)'; }}
         />
 
-        {/* Section: Rarity Tier */}
+        {/* Supply Count */}
+        <SectionLabel text="Supply Count" />
+        <div className="flex items-center gap-3 mb-5">
+          <input
+            type="number"
+            min={1}
+            max={remainingSlots}
+            value={supply}
+            onChange={(e) => setSupply(Math.max(1, Number(e.target.value)))}
+            className="flex-1 bg-transparent font-mono text-sm py-2 px-3 rounded-lg outline-none transition-colors duration-200"
+            style={{ border: '1px solid var(--cf-border2)', color: 'var(--cf-text)' }}
+          />
+          <span className="font-ui text-[0.5rem] uppercase shrink-0" style={{ color: 'var(--cf-muted)' }}>
+            copies
+          </span>
+        </div>
+        <div className="flex gap-2 mb-5 flex-wrap">
+          {[10, 50, 100, 250, 500].map(n => (
+            <button
+              key={n}
+              onClick={() => setSupply(Math.min(n, remainingSlots))}
+              className="font-ui text-[0.5rem] px-2.5 py-1 rounded-md transition-all duration-200"
+              style={{
+                border: `1px solid ${supply === n ? 'var(--cf-gold)' : 'var(--cf-border2)'}`,
+                color: supply === n ? 'var(--cf-gold)' : 'var(--cf-muted2)',
+                background: supply === n ? 'rgba(200,168,75,0.08)' : 'transparent',
+              }}
+            >
+              {n}
+            </button>
+          ))}
+        </div>
+
+        {/* Rarity Tier */}
         <SectionLabel text="Rarity Tier" />
         <div className="grid grid-cols-4 gap-2 mb-5">
           {RARITY_OPTIONS.map((r) => {
@@ -245,7 +294,7 @@ const ForgePage = ({ cards, trades, onDataChange }: ForgePageProps) => {
           })}
         </div>
 
-        {/* Section: Battle Stats */}
+        {/* Battle Stats */}
         <SectionLabel text="Battle Stats" />
         <div className="grid grid-cols-5 gap-1 mb-3 overflow-x-auto">
           {(Object.keys(stats) as (keyof CardStats)[]).map((key) => (
@@ -264,10 +313,10 @@ const ForgePage = ({ cards, trades, onDataChange }: ForgePageProps) => {
           className="w-full py-2 rounded-lg font-ui text-xs transition-all duration-200 mb-5 group"
           style={{ border: '1px solid var(--cf-border2)', color: 'var(--cf-muted2)' }}
         >
-          <span className="inline-block transition-transform duration-300 group-hover:rotate-180">↻</span>{' '}Reroll Stats
+          <span className="inline-block transition-transform duration-300 group-hover:rotate-180">↻</span> Reroll Stats
         </button>
 
-        {/* Section: IPFS Storage */}
+        {/* IPFS Storage */}
         <SectionLabel text="IPFS Storage" />
         <div className="rounded-lg p-3 mb-5" style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid var(--cf-border)' }}>
           <div className="flex items-center gap-2 mb-2">
@@ -308,8 +357,9 @@ const ForgePage = ({ cards, trades, onDataChange }: ForgePageProps) => {
 
         {/* Forge Button */}
         <button
-          onClick={forgeCard}
-          className="relative w-full py-3 font-display text-sm font-bold tracking-wider rounded-lg overflow-hidden transition-all duration-300 hover:-translate-y-0.5"
+          onClick={forgeTemplate}
+          disabled={!name.trim() || !imageUrl || supply > remainingSlots || supply < 1}
+          className="relative w-full py-3 font-display text-sm font-bold tracking-wider rounded-lg overflow-hidden transition-all duration-300 hover:-translate-y-0.5 disabled:opacity-40 disabled:cursor-not-allowed"
           style={{
             background: 'linear-gradient(135deg, #a07828, #f0d060, #c8a84b, #fff0a0, #c8a84b)',
             backgroundSize: '300% 100%',
@@ -317,63 +367,90 @@ const ForgePage = ({ cards, trades, onDataChange }: ForgePageProps) => {
             boxShadow: '0 4px 20px rgba(200,168,75,0.3)',
           }}
         >
-          ⚒ Forge Card
+          ⚒ Forge Template ({supply} copies)
         </button>
       </div>
 
-      {/* Right Panel */}
-      <div className="flex-1 min-w-0">
-        {/* Preview */}
-        <div className="flex flex-col items-center py-10 relative" style={{
-          background: 'radial-gradient(ellipse at center, rgba(200,168,75,0.04) 0%, transparent 70%)',
-        }}>
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden">
-            <span className="font-display text-[8rem] font-black uppercase" style={{
-              color: 'transparent',
-              WebkitTextStroke: '1px rgba(200,168,75,0.04)',
-            }}>PREVIEW</span>
-          </div>
-          <div className="flex items-center gap-4 mb-6">
-            <div className="flex-1 h-px w-16" style={{ background: 'linear-gradient(90deg, transparent, var(--cf-border2))' }} />
-            <span className="font-ui text-[0.6rem] uppercase tracking-[0.25em]" style={{ color: 'var(--cf-muted2)' }}>Live Preview</span>
-            <div className="flex-1 h-px w-16" style={{ background: 'linear-gradient(90deg, var(--cf-border2), transparent)' }} />
-          </div>
-          <NFTCardComponent card={previewCard} index={0} trades={[]} />
+      {/* Right Panel — Template Library */}
+      <div className="flex-1 min-w-0 p-6 sm:p-8">
+        <div className="flex items-center gap-3 mb-6">
+          <h2 className="font-display text-xl text-gold-gradient">Card Templates</h2>
+          <span className="font-ui text-[0.6rem] px-2 py-0.5 rounded-full" style={{
+            background: 'rgba(200,168,75,0.1)',
+            border: '1px solid rgba(200,168,75,0.2)',
+            color: 'var(--cf-gold)',
+          }}>{templates.length}</span>
         </div>
 
-        {/* Library */}
-        <div className="p-8">
-          <div className="flex items-center gap-3 mb-6">
-            <h2 className="font-display text-xl text-gold-gradient">Your Cards</h2>
-            <span className="font-ui text-[0.6rem] px-2 py-0.5 rounded-full" style={{
-              background: 'rgba(200,168,75,0.1)',
-              border: '1px solid rgba(200,168,75,0.2)',
-              color: 'var(--cf-gold)',
-            }}>{cards.length}</span>
+        {templates.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 opacity-50">
+            <span className="text-4xl mb-3 opacity-30">🃏</span>
+            <p className="font-display text-sm" style={{ color: 'var(--cf-muted2)' }}>No templates yet</p>
+            <p className="font-body text-xs" style={{ color: 'var(--cf-muted)' }}>Create card templates with supply counts</p>
           </div>
-          {cards.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 opacity-50">
-              <span className="text-4xl mb-3 opacity-30">🃏</span>
-              <p className="font-display text-sm" style={{ color: 'var(--cf-muted2)' }}>No cards forged yet</p>
-              <p className="font-body text-xs" style={{ color: 'var(--cf-muted)' }}>Use the forge to create your first card</p>
-            </div>
-          ) : (
-            <div className="flex flex-wrap gap-8 justify-center">
-              {cards.map((card, i) => (
-                <NFTCardComponent
-                  key={card.id}
-                  card={card}
-                  index={i}
-                  trades={trades}
-                  showDelete
-                  onDelete={() => {
-                    if (confirm(`Delete "${card.name}"?`)) deleteCard(card.id);
+        ) : (
+          <div className="space-y-3">
+            {templates.map((t) => {
+              const color = rarityColor(t.rarity);
+              const pct = t.supply > 0 ? (t.minted / t.supply) * 100 : 0;
+              return (
+                <div
+                  key={t.id}
+                  className="flex items-center gap-4 p-4 rounded-xl transition-all duration-300 group"
+                  style={{
+                    background: 'var(--cf-surface)',
+                    border: `1px solid ${color}30`,
                   }}
-                />
-              ))}
-            </div>
-          )}
-        </div>
+                >
+                  {/* Image */}
+                  <div className="w-14 h-14 rounded-lg overflow-hidden shrink-0" style={{ border: '1px solid var(--cf-border)' }}>
+                    {t.imageUrl ? (
+                      <img src={t.imageUrl} alt={t.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-xl" style={{ background: 'var(--cf-surface2)' }}>
+                        {t.element.split(' ')[0]}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-display text-sm font-bold truncate" style={{ color }}>{t.name}</span>
+                      <span className="font-ui text-[0.45rem] uppercase font-bold px-1.5 py-0.5 rounded-full" style={{ border: `1px solid ${color}40`, color }}>
+                        {t.rarity}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3 mb-1.5">
+                      <span className="font-mono text-[0.55rem]" style={{ color: 'var(--cf-muted)' }}>
+                        {t.minted}/{t.supply} minted
+                      </span>
+                      <span className="font-ui text-[0.45rem]" style={{ color: 'var(--cf-muted)' }}>
+                        {t.element}
+                      </span>
+                    </div>
+                    {/* Supply bar */}
+                    <div className="h-[4px] rounded-full overflow-hidden" style={{ background: 'var(--cf-surface2)' }}>
+                      <div className="h-full rounded-full transition-all duration-500" style={{
+                        width: `${pct}%`,
+                        background: `linear-gradient(90deg, ${color}80, ${color})`,
+                      }} />
+                    </div>
+                  </div>
+
+                  {/* Delete */}
+                  <button
+                    onClick={() => { if (confirm(`Delete template "${t.name}"?`)) deleteTemplate(t.id); }}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 font-ui text-xs px-2 py-1 rounded"
+                    style={{ color: '#f87171' }}
+                  >
+                    ✕
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
