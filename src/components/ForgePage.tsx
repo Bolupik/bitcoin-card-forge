@@ -390,20 +390,44 @@ const ForgePage = ({ onDataChange }: ForgePageProps) => {
           </p>
         </div>
 
-        {/* Forge Button */}
-        <button
-          onClick={forgeTemplate}
-          disabled={!name.trim() || !imageUrl || supply > remainingSlots || supply < 1}
-          className="relative w-full py-3 font-display text-sm font-bold tracking-wider rounded-lg overflow-hidden transition-all duration-300 hover:-translate-y-0.5 disabled:opacity-40 disabled:cursor-not-allowed"
-          style={{
-            background: 'linear-gradient(135deg, #a07828, #f0d060, #c8a84b, #fff0a0, #c8a84b)',
-            backgroundSize: '300% 100%',
-            color: 'var(--cf-bg)',
-            boxShadow: '0 4px 20px rgba(200,168,75,0.3)',
-          }}
-        >
-          ⚒ Forge Template ({supply} copies)
-        </button>
+        {/* Forge / Save Edit Button */}
+        {editingId ? (
+          <div className="flex gap-2 w-full">
+            <button
+              onClick={saveEdit}
+              disabled={!name.trim()}
+              className="flex-1 py-3 font-display text-sm font-bold tracking-wider rounded-lg overflow-hidden transition-all duration-300 hover:-translate-y-0.5 disabled:opacity-40"
+              style={{
+                background: 'linear-gradient(135deg, #a07828, #f0d060, #c8a84b)',
+                color: 'var(--cf-bg)',
+                boxShadow: '0 4px 20px rgba(200,168,75,0.3)',
+              }}
+            >
+              ✓ Save Changes
+            </button>
+            <button
+              onClick={cancelEdit}
+              className="px-4 py-3 font-display text-sm rounded-lg transition-all duration-200"
+              style={{ border: '1px solid var(--cf-border2)', color: 'var(--cf-muted2)' }}
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={forgeTemplate}
+            disabled={!name.trim() || !imageUrl || supply > remainingSlots || supply < 1}
+            className="relative w-full py-3 font-display text-sm font-bold tracking-wider rounded-lg overflow-hidden transition-all duration-300 hover:-translate-y-0.5 disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{
+              background: 'linear-gradient(135deg, #a07828, #f0d060, #c8a84b, #fff0a0, #c8a84b)',
+              backgroundSize: '300% 100%',
+              color: 'var(--cf-bg)',
+              boxShadow: '0 4px 20px rgba(200,168,75,0.3)',
+            }}
+          >
+            ⚒ Forge Template ({supply} copies)
+          </button>
+        )}
       </div>
 
       {/* Right Panel — Template Library */}
