@@ -46,6 +46,7 @@ const Admin = () => {
         {page === 'gallery' && <GalleryPage cards={cards} trades={trades} />}
         {page === 'forge' && <ForgePage onDataChange={refreshData} />}
         {page === 'trading' && <TradingPage cards={cards} trades={trades} onDataChange={refreshData} />}
+        {page === 'whitelist' && <WhitelistAdmin />}
       </div>
     </>
   );

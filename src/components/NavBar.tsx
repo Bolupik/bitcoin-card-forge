@@ -12,6 +12,7 @@ const NavBar = ({ activePage, onNavigate, onLogout, tradeCount }: NavBarProps) =
     { page: 'gallery', label: 'Gallery' },
     { page: 'forge', label: 'Forge', icon: '⚒' },
     { page: 'trading', label: 'Trading', icon: '⇄' },
+    { page: 'whitelist', label: 'Whitelist', icon: '📋' },
   ];
 
   return (
