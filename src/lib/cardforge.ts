@@ -52,7 +52,7 @@ export interface CollectionConfig {
 }
 
 export type AppPage = 'gallery' | 'trading' | 'mint';
-export type AdminPage = 'forge' | 'trading' | 'gallery';
+export type AdminPage = 'forge' | 'trading' | 'gallery' | 'whitelist';
 
 export const ELEMENTS = [
   '⚡ ELECTRIC', '🔥 FIRE', '🌊 WATER', '🌿 NATURE',
