@@ -5,6 +5,7 @@ import NavBar from '@/components/NavBar';
 import GalleryPage from '@/components/GalleryPage';
 import ForgePage from '@/components/ForgePage';
 import TradingPage from '@/components/TradingPage';
+import WhitelistAdmin from '@/components/WhitelistAdmin';
 import { AdminPage, getCards, getTrades, NFTCard, Trade } from '@/lib/cardforge';
 
 const Admin = () => {
@@ -45,6 +46,7 @@ const Admin = () => {
         {page === 'gallery' && <GalleryPage cards={cards} trades={trades} />}
         {page === 'forge' && <ForgePage onDataChange={refreshData} />}
         {page === 'trading' && <TradingPage cards={cards} trades={trades} onDataChange={refreshData} />}
+        {page === 'whitelist' && <WhitelistAdmin />}
       </div>
     </>
   );
