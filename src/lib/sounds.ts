@@ -95,3 +95,101 @@ export const playClick = () => {
     osc.stop(c.currentTime + 0.05);
   } catch { /* silent fail */ }
 };
+
+/** Pack rip / tear sound — noisy whoosh */
+export const playPackRip = () => {
+  try {
+    const c = getCtx();
+    const now = c.currentTime;
+    // White noise burst via buffer
+    const bufferSize = c.sampleRate * 0.6;
+    const buffer = c.createBuffer(1, bufferSize, c.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      // Decaying noise
+      data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+    }
+    const noise = c.createBufferSource();
+    noise.buffer = buffer;
+    const filter = c.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(2000, now);
+    filter.frequency.exponentialRampToValueAtTime(400, now + 0.6);
+    filter.Q.value = 2;
+    const gain = c.createGain();
+    gain.gain.setValueAtTime(0.25, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+    noise.connect(filter).connect(gain).connect(c.destination);
+    noise.start(now);
+    noise.stop(now + 0.6);
+  } catch { /* silent fail */ }
+};
+
+/** Card flip sound — woody tap */
+export const playCardFlip = () => {
+  try {
+    const c = getCtx();
+    const now = c.currentTime;
+    const osc = c.createOscillator();
+    const gain = c.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(600, now);
+    osc.frequency.exponentialRampToValueAtTime(180, now + 0.08);
+    gain.gain.setValueAtTime(0.18, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+    osc.connect(gain).connect(c.destination);
+    osc.start(now);
+    osc.stop(now + 0.12);
+  } catch { /* silent fail */ }
+};
+
+/** Rare/Epic/Legendary celebratory sting */
+export const playRareReveal = (intensity: 'rare' | 'epic' | 'legendary') => {
+  try {
+    const c = getCtx();
+    const now = c.currentTime;
+    const baseFreq = intensity === 'legendary' ? 880 : intensity === 'epic' ? 740 : 660;
+    const notes = [baseFreq, baseFreq * 1.25, baseFreq * 1.5, baseFreq * 2];
+    notes.forEach((freq, i) => {
+      const osc = c.createOscillator();
+      const gain = c.createGain();
+      osc.type = intensity === 'legendary' ? 'sawtooth' : 'triangle';
+      osc.frequency.setValueAtTime(freq, now + i * 0.06);
+      gain.gain.setValueAtTime(0, now + i * 0.06);
+      gain.gain.linearRampToValueAtTime(0.14, now + i * 0.06 + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.06 + 0.5);
+      osc.connect(gain).connect(c.destination);
+      osc.start(now + i * 0.06);
+      osc.stop(now + i * 0.06 + 0.55);
+    });
+    if (intensity === 'legendary') {
+      // Sub bass thud
+      const sub = c.createOscillator();
+      const sg = c.createGain();
+      sub.type = 'sine';
+      sub.frequency.setValueAtTime(60, now);
+      sub.frequency.exponentialRampToValueAtTime(30, now + 0.4);
+      sg.gain.setValueAtTime(0.3, now);
+      sg.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+      sub.connect(sg).connect(c.destination);
+      sub.start(now);
+      sub.stop(now + 0.6);
+    }
+  } catch { /* silent fail */ }
+};
+
+/** Soft ambient hover sound */
+export const playHover = () => {
+  try {
+    const c = getCtx();
+    const osc = c.createOscillator();
+    const gain = c.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(1400, c.currentTime);
+    gain.gain.setValueAtTime(0.025, c.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.08);
+    osc.connect(gain).connect(c.destination);
+    osc.start();
+    osc.stop(c.currentTime + 0.1);
+  } catch { /* silent fail */ }
+};

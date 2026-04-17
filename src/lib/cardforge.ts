@@ -49,6 +49,7 @@ export interface Trade {
 
 export interface CollectionConfig {
   totalSupply: number;
+  cardsPerPack: number;
 }
 
 export type AppPage = 'gallery' | 'trading' | 'mint';
@@ -111,12 +112,29 @@ export const saveTrades = (trades: Trade[]) =>
 export const getCollectionConfig = (): CollectionConfig => {
   try {
     const raw = localStorage.getItem('cf_config_v1');
-    return raw ? JSON.parse(raw) : { totalSupply: 1000 };
-  } catch { return { totalSupply: 1000 }; }
+    const parsed = raw ? JSON.parse(raw) : {};
+    return {
+      totalSupply: parsed.totalSupply ?? 10000,
+      cardsPerPack: parsed.cardsPerPack ?? 5,
+    };
+  } catch { return { totalSupply: 10000, cardsPerPack: 5 }; }
 };
 
 export const saveCollectionConfig = (config: CollectionConfig) =>
   localStorage.setItem('cf_config_v1', JSON.stringify(config));
+
+// Total number of mystery packs available, derived from collection config
+export const getTotalPackCount = (): number => {
+  const cfg = getCollectionConfig();
+  return Math.floor(cfg.totalSupply / cfg.cardsPerPack);
+};
+
+// How many packs have been opened (one pack = cardsPerPack cards minted)
+export const getOpenedPackCount = (): number => {
+  const cfg = getCollectionConfig();
+  const minted = getCards().length;
+  return Math.floor(minted / cfg.cardsPerPack);
+};
 
 // Mint a random card from available templates
 export const mintFromPool = (): { card: NFTCard; template: CardTemplate } | null => {
@@ -157,4 +175,65 @@ export const mintFromPool = (): { card: NFTCard; template: CardTemplate } | null
   saveCards(cards);
 
   return { card, template: chosen };
+};
+
+/**
+ * Open a mystery pack: draws `cardsPerPack` cards weighted by remaining supply.
+ * Returns null if not enough cards are available.
+ */
+export const mintPack = (): NFTCard[] | null => {
+  const cfg = getCollectionConfig();
+  const templates = getTemplates();
+  // Build mutable pool with remaining counts
+  const pool = templates
+    .map(t => ({ tmpl: t, remaining: t.supply - t.minted }))
+    .filter(p => p.remaining > 0);
+
+  if (pool.length === 0) return null;
+
+  const totalRemaining = pool.reduce((s, p) => s + p.remaining, 0);
+  if (totalRemaining < cfg.cardsPerPack) return null;
+
+  const cards = getCards();
+  const drawn: NFTCard[] = [];
+
+  for (let i = 0; i < cfg.cardsPerPack; i++) {
+    const total = pool.reduce((s, p) => s + p.remaining, 0);
+    if (total <= 0) break;
+    let roll = Math.random() * total;
+    let chosenIdx = 0;
+    for (let j = 0; j < pool.length; j++) {
+      roll -= pool[j].remaining;
+      if (roll <= 0) { chosenIdx = j; break; }
+    }
+    const chosen = pool[chosenIdx].tmpl;
+    drawn.push({
+      id: crypto.randomUUID(),
+      templateId: chosen.id,
+      name: chosen.name,
+      description: chosen.description,
+      rarity: chosen.rarity,
+      stats: { ...chosen.stats }, // snapshot
+      element: chosen.element,
+      imageUrl: chosen.imageUrl,
+      metadataUrl: chosen.metadataUrl,
+      serial: cards.length + drawn.length + 1,
+      createdAt: new Date().toISOString(),
+    });
+    pool[chosenIdx].remaining -= 1;
+  }
+
+  if (drawn.length === 0) return null;
+
+  // Persist: increment template minted, append cards
+  const counts = new Map<string, number>();
+  for (const c of drawn) counts.set(c.templateId, (counts.get(c.templateId) ?? 0) + 1);
+  for (const t of templates) {
+    const n = counts.get(t.id);
+    if (n) t.minted += n;
+  }
+  saveTemplates(templates);
+  saveCards([...cards, ...drawn]);
+
+  return drawn;
 };
