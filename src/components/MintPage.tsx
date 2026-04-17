@@ -1,352 +1,147 @@
-import { useState, useRef, useCallback } from 'react';
-import { NFTCard, Rarity, getCards, getTemplates, getCollectionConfig, mintFromPool } from '@/lib/cardforge';
-import { playTick, playReveal, playSuccess, playClick } from '@/lib/sounds';
-import NFTCardComponent from './NFTCard';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  NFTCard,
+  getCards,
+  getTemplates,
+  getCollectionConfig,
+  getOpenedPackCount,
+  getTotalPackCount,
+  mintPack,
+} from '@/lib/cardforge';
+import PackGrid from './mint/PackGrid';
+import PackOpenAnimation from './mint/PackOpenAnimation';
+import CardRevealSequence from './mint/CardRevealSequence';
 
-const RARITY_COLOR: Record<Rarity, { text: string; glow: string; border: string }> = {
-  common: { text: '#b8cfe0', glow: 'rgba(160,190,215,0.35)', border: 'rgba(160,190,215,0.25)' },
-  rare: { text: '#88c4ff', glow: 'rgba(60,140,255,0.4)', border: 'rgba(60,140,255,0.3)' },
-  epic: { text: '#d870ff', glow: 'rgba(160,60,240,0.4)', border: 'rgba(160,60,240,0.3)' },
-  legendary: { text: '#ffe860', glow: 'rgba(240,180,20,0.5)', border: 'rgba(240,180,20,0.35)' },
-};
+type Phase = 'pick' | 'opening' | 'revealing';
 
+/**
+ * Orchestrates the 3-stage Pokémon-style pack mint flow:
+ *   pick → opening (animation) → revealing (one-by-one card flips)
+ */
 const MintPage = () => {
-  const [phase, setPhase] = useState<'idle' | 'rolling' | 'reveal'>('idle');
-  const [mintedCard, setMintedCard] = useState<NFTCard | null>(null);
-  const [showOverlay, setShowOverlay] = useState(false);
-  const [rollEmoji, setRollEmoji] = useState('🎴');
-  const rollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const [mintCount, setMintCount] = useState(() => getCards().length);
-  const [recentMints, setRecentMints] = useState<NFTCard[]>(() => getCards().slice(-10).reverse());
-  const [noTemplates, setNoTemplates] = useState(false);
+  const navigate = useNavigate();
+  const [phase, setPhase] = useState<Phase>('pick');
+  const [pickedPackIdx, setPickedPackIdx] = useState<number | null>(null);
+  const [drawnCards, setDrawnCards] = useState<NFTCard[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [mintedTotal, setMintedTotal] = useState(() => getCards().length);
 
   const config = getCollectionConfig();
-  const emojis = ['🔥', '🌊', '⚡', '🌿', '🌑', '✨', '🏔️', '💀', '🎴', '⚔️'];
-
-  // Check available templates for display
   const templates = getTemplates();
   const totalAllocated = templates.reduce((s, t) => s + t.supply, 0);
   const totalMintedFromTemplates = templates.reduce((s, t) => s + t.minted, 0);
-  const availableCount = totalAllocated - totalMintedFromTemplates;
+  const cardsAvailable = totalAllocated - totalMintedFromTemplates;
 
-  const handleMint = useCallback(() => {
-    if (phase !== 'idle') return;
-    playClick();
-    setPhase('rolling');
-    setMintedCard(null);
-    setNoTemplates(false);
+  const totalPacks = getTotalPackCount();
+  const openedPacks = getOpenedPackCount();
+  const packsRemaining = totalPacks - openedPacks;
 
-    let count = 0;
-    const total = 20;
+  const canMint = cardsAvailable >= config.cardsPerPack && packsRemaining > 0;
 
-    rollRef.current = setInterval(() => {
-      setRollEmoji(emojis[Math.floor(Math.random() * emojis.length)]);
-      playTick();
-      count++;
-      if (count >= total) {
-        if (rollRef.current) clearInterval(rollRef.current);
-
-        const result = mintFromPool();
-        if (!result) {
-          setNoTemplates(true);
-          setPhase('idle');
-          return;
-        }
-
-        playReveal();
-        setMintedCard(result.card);
-        setMintCount(getCards().length);
-        setRecentMints(getCards().slice(-10).reverse());
-        setPhase('reveal');
-
-        setTimeout(() => {
-          playSuccess();
-          setShowOverlay(true);
-        }, 600);
-      }
-    }, 80);
-  }, [phase]);
-
-  const dismissOverlay = () => {
-    setShowOverlay(false);
-    setPhase('idle');
+  const handlePackSelected = (idx: number) => {
+    setError(null);
+    const drawn = mintPack();
+    if (!drawn) {
+      setError('No cards available — the collection may be sold out.');
+      return;
+    }
+    setPickedPackIdx(idx);
+    setDrawnCards(drawn);
+    setMintedTotal(getCards().length);
+    setPhase('opening');
   };
 
-  const pct = config.totalSupply > 0 ? Math.min((mintCount / config.totalSupply) * 100, 100) : 0;
+  const reset = () => {
+    setPhase('pick');
+    setPickedPackIdx(null);
+    setDrawnCards([]);
+  };
 
   return (
-    <div className="relative min-h-screen flex flex-col">
-      <div className="flex-1 flex flex-col items-center justify-center px-4 py-8 sm:py-12">
-        {/* Eyebrow */}
-        <div
-          className="inline-flex items-center gap-2 font-ui text-[0.5rem] font-bold uppercase tracking-[0.4em] px-4 py-1.5 rounded-full mb-6 animate-card-enter"
-          style={{ border: '1px solid rgba(200,168,75,0.2)', color: 'var(--cf-gold)' }}
-        >
-          <span className="w-1.5 h-1.5 rounded-full animate-pulse-dot" style={{ background: '#4ade80' }} />
-          Live · Genesis Mint
-        </div>
-
-        {/* Title */}
-        <h1
-          className="font-display font-black text-center mb-2 animate-card-enter"
-          style={{
-            fontSize: 'clamp(1.6rem, 5vw, 3.5rem)',
-            background: 'linear-gradient(160deg, #c8a84b, #fff5c0, #e8c870, #c8a84b)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            filter: 'drop-shadow(0 0 30px rgba(200,168,75,0.25))',
-            animationDelay: '0.1s',
-          }}
-        >
-          CardForge Genesis
-        </h1>
-        <p
-          className="font-body text-xs sm:text-sm text-center max-w-[380px] mb-8 animate-card-enter"
-          style={{ color: 'var(--cf-muted2)', lineHeight: 1.8, animationDelay: '0.2s' }}
-        >
-          Randomly mint a card from the Genesis collection.
-          {availableCount > 0 ? ` ${availableCount} cards remaining.` : ' No cards available to mint.'}
-        </p>
-
-        {/* Mint card visual */}
-        <div
-          className="relative w-[280px] sm:w-[320px] rounded-2xl overflow-hidden mb-8 animate-card-enter"
-          style={{
-            background: 'linear-gradient(160deg, var(--cf-surface), var(--cf-surface2))',
-            border: `1.5px solid ${phase === 'rolling' ? 'var(--cf-gold)' : 'var(--cf-border)'}`,
-            boxShadow: phase === 'rolling'
-              ? '0 0 60px rgba(200,168,75,0.2), inset 0 0 40px rgba(0,0,0,0.4)'
-              : '0 12px 50px rgba(0,0,0,0.5)',
-            transition: 'border-color 0.3s, box-shadow 0.5s',
-            animationDelay: '0.3s',
-          }}
-        >
-          <div className="relative flex items-center justify-center overflow-hidden" style={{ height: 200 }}>
-            <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at center, rgba(200,168,75,0.04), transparent 70%)' }} />
+    <div className="relative min-h-screen flex flex-col px-4 py-8 sm:py-12">
+      {/* Stats bar */}
+      <div className="w-full max-w-[860px] mx-auto mb-6 grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+        {[
+          { label: 'Packs Left', value: `${packsRemaining.toLocaleString()} / ${totalPacks.toLocaleString()}` },
+          { label: 'Cards / Pack', value: config.cardsPerPack.toString() },
+          { label: 'Total Minted', value: mintedTotal.toLocaleString() },
+          { label: 'Price', value: 'Free' },
+        ].map((row) => (
+          <div
+            key={row.label}
+            className="flex flex-col items-center justify-center py-2 px-3 rounded-lg"
+            style={{ background: 'var(--cf-surface)', border: '1px solid var(--cf-border)' }}
+          >
             <span
-              className="text-7xl sm:text-8xl select-none transition-all duration-150"
-              style={{
-                filter: phase === 'rolling' ? 'drop-shadow(0 0 24px rgba(200,168,75,0.5))' : 'drop-shadow(0 0 12px rgba(200,168,75,0.15))',
-                animation: phase === 'rolling' ? 'shake 0.25s ease-in-out infinite' : 'float-gentle 3s ease-in-out infinite',
-                transform: phase === 'rolling' ? 'scale(1.1)' : 'scale(1)',
-              }}
+              className="font-ui text-[0.5rem] uppercase tracking-wider"
+              style={{ color: 'var(--cf-muted)' }}
             >
-              {phase === 'reveal' && mintedCard ? mintedCard.element.split(' ')[0] : rollEmoji}
+              {row.label}
             </span>
-            {phase === 'rolling' && (
-              <div className="absolute inset-0 pointer-events-none" style={{
-                background: 'linear-gradient(180deg, transparent 35%, rgba(200,168,75,0.08) 50%, transparent 65%)',
-                animation: 'sweep 0.6s linear infinite',
-              }} />
-            )}
-          </div>
-
-          <div className="p-5" style={{ borderTop: '1px solid var(--cf-border)' }}>
-            {phase === 'reveal' && mintedCard ? (
-              <div className="animate-card-enter">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-display text-sm font-bold" style={{ color: RARITY_COLOR[mintedCard.rarity].text }}>
-                    {mintedCard.name}
-                  </span>
-                  <span
-                    className="font-ui text-[0.5rem] uppercase font-bold px-2 py-0.5 rounded-full"
-                    style={{ border: `1px solid ${RARITY_COLOR[mintedCard.rarity].border}`, color: RARITY_COLOR[mintedCard.rarity].text }}
-                  >
-                    {mintedCard.rarity}
-                  </span>
-                </div>
-                <p className="font-body text-[0.6rem] leading-relaxed" style={{ color: 'var(--cf-muted2)' }}>
-                  {mintedCard.description}
-                </p>
-              </div>
-            ) : (
-              <>
-                <div className="flex items-center justify-between mb-3">
-                  <span className="font-display text-sm" style={{ color: 'var(--cf-text)' }}>
-                    {phase === 'rolling' ? 'Rolling...' : 'Random Card'}
-                  </span>
-                  <span className="font-ui text-[0.55rem] font-bold" style={{ color: 'var(--cf-gold)' }}>
-                    FREE
-                  </span>
-                </div>
-                <span className="font-ui text-[0.45rem] uppercase" style={{ color: 'var(--cf-muted)' }}>
-                  {availableCount} cards available in pool
-                </span>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* No templates warning */}
-        {noTemplates && (
-          <div className="w-[280px] sm:w-[320px] mb-4 p-3 rounded-lg text-center animate-card-enter" style={{
-            background: 'rgba(248,113,113,0.08)',
-            border: '1px solid rgba(248,113,113,0.2)',
-          }}>
-            <span className="font-body text-xs" style={{ color: '#f87171' }}>
-              No cards available to mint. The collection may be sold out!
+            <span
+              className="font-display text-xs sm:text-sm font-bold mt-0.5"
+              style={{ color: 'var(--cf-text)' }}
+            >
+              {row.value}
             </span>
           </div>
-        )}
-
-        {/* Progress bar */}
-        <div className="w-[280px] sm:w-[320px] mb-4">
-          <div className="flex justify-between mb-1.5">
-            <span className="font-ui text-[0.5rem] uppercase tracking-wider" style={{ color: 'var(--cf-muted)' }}>Minted</span>
-            <span className="font-mono text-[0.55rem]" style={{ color: 'var(--cf-muted2)' }}>
-              {mintCount.toLocaleString()} / {config.totalSupply.toLocaleString()}
-            </span>
-          </div>
-          <div className="h-[6px] rounded-full overflow-hidden" style={{ background: 'var(--cf-surface2)', border: '1px solid var(--cf-border)' }}>
-            <div className="h-full rounded-full transition-all duration-1000 ease-out" style={{
-              width: `${Math.max(pct, 0.5)}%`,
-              background: 'linear-gradient(90deg, var(--cf-gold-dark), var(--cf-gold), var(--cf-gold2))',
-              boxShadow: '0 0 10px rgba(200,168,75,0.4)',
-            }} />
-          </div>
-        </div>
-
-        {/* Mint button */}
-        <button
-          onClick={handleMint}
-          disabled={phase !== 'idle' || availableCount === 0}
-          className="group relative w-[280px] sm:w-[320px] font-display text-sm sm:text-base font-bold py-3.5 sm:py-4 rounded-xl overflow-hidden transition-all duration-500 hover:-translate-y-0.5 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
-          style={{
-            background: 'linear-gradient(135deg, #a07828, #f0d060, #c8a84b)',
-            color: 'var(--cf-bg)',
-            boxShadow: phase === 'idle' ? '0 4px 30px rgba(200,168,75,0.3)' : 'none',
-          }}
-        >
-          <div className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{
-            background: 'linear-gradient(115deg, transparent 20%, rgba(255,255,255,0.25) 50%, transparent 80%)',
-            backgroundSize: '200%',
-            animation: 'shimmer 2s linear infinite',
-          }} />
-          {phase === 'rolling' ? (
-            <span className="flex items-center justify-center gap-2">
-              <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-              Minting...
-            </span>
-          ) : phase === 'reveal' ? (
-            <span>✦ Minted!</span>
-          ) : (
-            <span className="flex items-center justify-center gap-2">⚡ Mint Now — Free</span>
-          )}
-        </button>
-
-        {/* Wallet hint */}
-        <div className="flex items-center gap-2 mt-5 px-4 py-2 rounded-xl" style={{
-          background: 'rgba(200,168,75,0.03)',
-          border: '1px solid rgba(200,168,75,0.1)',
-        }}>
-          <span className="text-xs">🔗</span>
-          <span className="font-body text-[0.6rem]" style={{ color: 'var(--cf-muted)' }}>Connect wallet to mint on-chain</span>
-        </div>
-
-        {/* Details */}
-        <div className="w-[280px] sm:w-[320px] mt-10 space-y-3">
-          {[
-            { label: 'Network', value: 'Stacks (Bitcoin L2)' },
-            { label: 'Standard', value: 'SIP-009 NFT' },
-            { label: 'Supply', value: `${config.totalSupply.toLocaleString()} Cards` },
-            { label: 'Price', value: 'Free Mint' },
-            { label: 'Available', value: `${availableCount} Cards` },
-          ].map(row => (
-            <div key={row.label} className="flex items-center justify-between py-2 px-3 rounded-lg" style={{
-              background: 'var(--cf-surface)',
-              border: '1px solid var(--cf-border)',
-            }}>
-              <span className="font-ui text-[0.55rem] uppercase tracking-wider" style={{ color: 'var(--cf-muted)' }}>{row.label}</span>
-              <span className="font-body text-[0.65rem] font-semibold" style={{ color: 'var(--cf-text)' }}>{row.value}</span>
-            </div>
-          ))}
-        </div>
-
-        {/* Recent Mints */}
-        {recentMints.length > 0 && (
-          <div className="w-full max-w-[600px] mt-14 px-2">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-1 h-5 rounded-full" style={{ background: 'linear-gradient(180deg, var(--cf-gold), transparent)' }} />
-              <h2 className="font-display text-sm font-bold" style={{ color: 'var(--cf-text)' }}>Recent Mints</h2>
-              <span className="font-ui text-[0.5rem] uppercase tracking-wider px-2 py-0.5 rounded-full" style={{ color: 'var(--cf-muted)', border: '1px solid var(--cf-border)' }}>
-                {recentMints.length}
-              </span>
-            </div>
-            <div className="space-y-2">
-              {recentMints.map((card, i) => (
-                <div
-                  key={card.id}
-                  className="flex items-center gap-3 p-3 rounded-xl transition-all duration-300 hover:scale-[1.01] animate-card-enter"
-                  style={{
-                    background: 'var(--cf-surface)',
-                    border: `1px solid ${RARITY_COLOR[card.rarity].border}`,
-                    boxShadow: `0 0 12px ${RARITY_COLOR[card.rarity].glow}`,
-                    animationDelay: `${i * 0.05}s`,
-                  }}
-                >
-                  <div className="w-9 h-9 rounded-lg flex items-center justify-center text-lg shrink-0" style={{ background: 'var(--cf-surface2)', border: '1px solid var(--cf-border)' }}>
-                    {card.imageUrl ? (
-                      <img src={card.imageUrl} alt="" className="w-full h-full object-cover rounded-lg" />
-                    ) : (
-                      card.element.split(' ')[0]
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-display text-xs font-bold truncate" style={{ color: RARITY_COLOR[card.rarity].text }}>{card.name}</span>
-                      <span className="font-ui text-[0.4rem] uppercase font-bold px-1.5 py-0.5 rounded-full shrink-0" style={{ border: `1px solid ${RARITY_COLOR[card.rarity].border}`, color: RARITY_COLOR[card.rarity].text }}>
-                        {card.rarity}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-3 mt-0.5">
-                      <span className="font-mono text-[0.5rem]" style={{ color: 'var(--cf-muted)' }}>#{card.serial.toString().padStart(4, '0')}</span>
-                      <span className="font-ui text-[0.45rem] uppercase" style={{ color: 'var(--cf-muted)' }}>{card.element}</span>
-                    </div>
-                  </div>
-                  <div className="flex gap-1.5 shrink-0">
-                    {(['ATK', 'DEF', 'HP'] as const).map(stat => (
-                      <div key={stat} className="text-center">
-                        <div className="font-ui text-[0.35rem] uppercase" style={{ color: 'var(--cf-muted)' }}>{stat}</div>
-                        <div className="font-mono text-[0.55rem] font-bold" style={{ color: 'var(--cf-text)' }}>{card.stats[stat]}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        ))}
       </div>
 
-      {/* Success overlay */}
-      {showOverlay && mintedCard && (
+      {/* Error banner */}
+      {error && (
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center"
-          style={{ background: 'rgba(5,5,14,0.95)', backdropFilter: 'blur(20px)' }}
-          onClick={dismissOverlay}
+          className="w-full max-w-[420px] mx-auto mb-4 p-3 rounded-lg text-center animate-card-enter"
+          style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)' }}
         >
-          <div className="flex flex-col items-center animate-card-enter" onClick={e => e.stopPropagation()}>
-            <div
-              className="absolute w-[350px] h-[350px] rounded-full pointer-events-none animate-spin-slow opacity-25"
-              style={{
-                background: `conic-gradient(from 0deg, transparent, ${RARITY_COLOR[mintedCard.rarity].glow}, transparent, ${RARITY_COLOR[mintedCard.rarity].glow}, transparent)`,
-              }}
-            />
-            <h2 className="font-display text-xl sm:text-2xl font-black mb-5 text-gold-gradient relative z-10" style={{ filter: 'drop-shadow(0 0 25px rgba(200,168,75,0.4))' }}>
-              ✦ Card Minted!
-            </h2>
-            <div className="relative z-10">
-              <NFTCardComponent card={mintedCard} index={0} trades={[]} />
-            </div>
-            <button
-              onClick={dismissOverlay}
-              className="relative z-10 font-ui text-xs mt-6 px-6 py-2 rounded-lg transition-all duration-300 hover:-translate-y-0.5 active:scale-95"
-              style={{ border: '1px solid rgba(200,168,75,0.2)', color: 'var(--cf-gold)', background: 'rgba(200,168,75,0.05)' }}
-            >
-              Continue
-            </button>
-          </div>
+          <span className="font-body text-xs" style={{ color: '#f87171' }}>{error}</span>
         </div>
+      )}
+
+      {/* Sold out / no templates */}
+      {!canMint && (
+        <div
+          className="w-full max-w-[420px] mx-auto mb-6 p-4 rounded-xl text-center animate-card-enter"
+          style={{ background: 'var(--cf-surface)', border: '1px solid var(--cf-border)' }}
+        >
+          <p className="font-display text-sm mb-2" style={{ color: 'var(--cf-gold)' }}>
+            Mint Unavailable
+          </p>
+          <p className="font-body text-xs" style={{ color: 'var(--cf-muted2)' }}>
+            {templates.length === 0
+              ? 'No card templates have been created yet. Check back soon.'
+              : packsRemaining <= 0
+                ? 'All packs have been opened!'
+                : `Not enough cards in the pool (${cardsAvailable} left).`}
+          </p>
+        </div>
+      )}
+
+      {/* Stage 1: Pack picker */}
+      {canMint && phase === 'pick' && (
+        <PackGrid
+          onPackSelected={handlePackSelected}
+          packsRemaining={packsRemaining}
+          totalPacks={totalPacks}
+        />
+      )}
+
+      {/* Stage 2: Pack opening animation overlay */}
+      {phase === 'opening' && pickedPackIdx !== null && (
+        <PackOpenAnimation
+          packIndex={pickedPackIdx}
+          onComplete={() => setPhase('revealing')}
+        />
+      )}
+
+      {/* Stage 3: Card reveal sequence overlay */}
+      {phase === 'revealing' && drawnCards.length > 0 && (
+        <CardRevealSequence
+          cards={drawnCards}
+          onMintAgain={reset}
+          onDone={() => navigate('/gallery')}
+        />
       )}
     </div>
   );
