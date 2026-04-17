@@ -14,16 +14,289 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      card_templates: {
+        Row: {
+          created_at: string
+          description: string
+          element: string
+          id: string
+          image_url: string
+          metadata_url: string
+          minted: number
+          name: string
+          rarity: Database["public"]["Enums"]["card_rarity"]
+          stats: Json
+          supply: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          element: string
+          id?: string
+          image_url: string
+          metadata_url?: string
+          minted?: number
+          name: string
+          rarity: Database["public"]["Enums"]["card_rarity"]
+          stats: Json
+          supply: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          element?: string
+          id?: string
+          image_url?: string
+          metadata_url?: string
+          minted?: number
+          name?: string
+          rarity?: Database["public"]["Enums"]["card_rarity"]
+          stats?: Json
+          supply?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      collection_config: {
+        Row: {
+          cards_per_pack: number
+          id: number
+          total_supply: number
+          updated_at: string
+        }
+        Insert: {
+          cards_per_pack?: number
+          id?: number
+          total_supply?: number
+          updated_at?: string
+        }
+        Update: {
+          cards_per_pack?: number
+          id?: number
+          total_supply?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      mint_packs: {
+        Row: {
+          created_at: string
+          id: string
+          opened_at: string | null
+          opened_by: string | null
+          pack_number: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          opened_at?: string | null
+          opened_by?: string | null
+          pack_number: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          opened_at?: string | null
+          opened_by?: string | null
+          pack_number?: number
+        }
+        Relationships: []
+      }
+      nft_cards: {
+        Row: {
+          created_at: string
+          description: string
+          element: string
+          id: string
+          image_url: string
+          metadata_url: string
+          name: string
+          owner_id: string
+          pack_id: string | null
+          rarity: Database["public"]["Enums"]["card_rarity"]
+          serial: number
+          stats: Json
+          template_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          element: string
+          id?: string
+          image_url: string
+          metadata_url?: string
+          name: string
+          owner_id: string
+          pack_id?: string | null
+          rarity: Database["public"]["Enums"]["card_rarity"]
+          serial: number
+          stats: Json
+          template_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          element?: string
+          id?: string
+          image_url?: string
+          metadata_url?: string
+          name?: string
+          owner_id?: string
+          pack_id?: string | null
+          rarity?: Database["public"]["Enums"]["card_rarity"]
+          serial?: number
+          stats?: Json
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nft_cards_pack_id_fkey"
+            columns: ["pack_id"]
+            isOneToOne: false
+            referencedRelation: "mint_packs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nft_cards_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "card_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          display_name: string | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      trades: {
+        Row: {
+          asking_price: string
+          card_id: string
+          created_at: string
+          id: string
+          seller_id: string
+          status: Database["public"]["Enums"]["trade_status"]
+          updated_at: string
+        }
+        Insert: {
+          asking_price: string
+          card_id: string
+          created_at?: string
+          id?: string
+          seller_id: string
+          status?: Database["public"]["Enums"]["trade_status"]
+          updated_at?: string
+        }
+        Update: {
+          asking_price?: string
+          card_id?: string
+          created_at?: string
+          id?: string
+          seller_id?: string
+          status?: Database["public"]["Enums"]["trade_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trades_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "nft_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      whitelist: {
+        Row: {
+          created_at: string
+          id: string
+          twitter_handle: string | null
+          twitter_verified: boolean
+          user_id: string | null
+          wallet_address: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          twitter_handle?: string | null
+          twitter_verified?: boolean
+          user_id?: string | null
+          wallet_address: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          twitter_handle?: string | null
+          twitter_verified?: boolean
+          user_id?: string | null
+          wallet_address?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
+      card_rarity: "common" | "rare" | "epic" | "legendary"
+      trade_status: "hold" | "active" | "pending" | "completed" | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +423,10 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+      card_rarity: ["common", "rare", "epic", "legendary"],
+      trade_status: ["hold", "active", "pending", "completed", "cancelled"],
+    },
   },
 } as const
