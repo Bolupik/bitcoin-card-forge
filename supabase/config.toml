@@ -1,0 +1,7 @@
+project_id = "pibudjzbhbfngmeaquug"
+
+[functions.open-pack]
+verify_jwt = false
+
+[functions.seed-packs]
+verify_jwt = false
