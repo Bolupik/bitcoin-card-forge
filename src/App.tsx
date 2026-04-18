@@ -24,6 +24,7 @@ const App = () => (
         <StacksAuthProvider>
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/auth" element={<Auth />} />
             <Route
               path="/gallery"
               element={
