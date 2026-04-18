@@ -140,7 +140,7 @@ const ensureSupabaseSession = async (address: string, bnsName?: string) => {
 
     const { error: upsertErr } = await supabase
       .from("profiles")
-      .upsert(profileRow, { onConflict: "user_id" });
+      .upsert([profileRow] as any, { onConflict: "user_id" });
 
     if (upsertErr) {
       console.warn("[StacksAuth] profile upsert failed", upsertErr);
