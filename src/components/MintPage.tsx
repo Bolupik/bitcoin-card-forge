@@ -1,23 +1,34 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  NFTCard,
-  getCards,
-  getTemplates,
-  getCollectionConfig,
-  getOpenedPackCount,
-  getTotalPackCount,
-  mintPack,
-} from '@/lib/cardforge';
+import { NFTCard } from '@/lib/cardforge';
+import { dbCardToNft, DbNftCard } from '@/lib/dbCards';
+import { supabase } from '@/integrations/supabase/client';
 import PackGrid from './mint/PackGrid';
 import PackOpenAnimation from './mint/PackOpenAnimation';
 import CardRevealSequence from './mint/CardRevealSequence';
 
 type Phase = 'pick' | 'opening' | 'revealing';
 
+interface Stats {
+  cardsPerPack: number;
+  totalPacks: number;
+  openedPacks: number;
+  totalMinted: number;
+}
+
+const DEFAULT_STATS: Stats = {
+  cardsPerPack: 5,
+  totalPacks: 0,
+  openedPacks: 0,
+  totalMinted: 0,
+};
+
 /**
- * Orchestrates the 3-stage Pokémon-style pack mint flow:
+ * Orchestrates the 3-stage Pokémon-style pack mint flow against the backend:
  *   pick → opening (animation) → revealing (one-by-one card flips)
+ *
+ * Cards are minted server-side via the `open-pack` edge function and persisted
+ * in the `nft_cards` table.
  */
 const MintPage = () => {
   const navigate = useNavigate();
@@ -25,31 +36,76 @@ const MintPage = () => {
   const [pickedPackIdx, setPickedPackIdx] = useState<number | null>(null);
   const [drawnCards, setDrawnCards] = useState<NFTCard[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [mintedTotal, setMintedTotal] = useState(() => getCards().length);
+  const [stats, setStats] = useState<Stats>(DEFAULT_STATS);
+  const [loading, setLoading] = useState(true);
+  const [minting, setMinting] = useState(false);
 
-  const config = getCollectionConfig();
-  const templates = getTemplates();
-  const totalAllocated = templates.reduce((s, t) => s + t.supply, 0);
-  const totalMintedFromTemplates = templates.reduce((s, t) => s + t.minted, 0);
-  const cardsAvailable = totalAllocated - totalMintedFromTemplates;
+  const loadStats = async () => {
+    try {
+      const [{ data: cfg }, { count: openedCount }, { count: totalPacksCount }, { count: cardsCount }] =
+        await Promise.all([
+          supabase.from('collection_config').select('cards_per_pack').eq('id', 1).maybeSingle(),
+          supabase.from('mint_packs').select('*', { count: 'exact', head: true }).not('opened_by', 'is', null),
+          supabase.from('mint_packs').select('*', { count: 'exact', head: true }),
+          supabase.from('nft_cards').select('*', { count: 'exact', head: true }),
+        ]);
 
-  const totalPacks = getTotalPackCount();
-  const openedPacks = getOpenedPackCount();
-  const packsRemaining = totalPacks - openedPacks;
-
-  const canMint = cardsAvailable >= config.cardsPerPack && packsRemaining > 0;
-
-  const handlePackSelected = (idx: number) => {
-    setError(null);
-    const drawn = mintPack();
-    if (!drawn) {
-      setError('No cards available — the collection may be sold out.');
-      return;
+      setStats({
+        cardsPerPack: cfg?.cards_per_pack ?? 5,
+        totalPacks: totalPacksCount ?? 0,
+        openedPacks: openedCount ?? 0,
+        totalMinted: cardsCount ?? 0,
+      });
+    } catch (e) {
+      console.error('failed to load mint stats', e);
+    } finally {
+      setLoading(false);
     }
-    setPickedPackIdx(idx);
-    setDrawnCards(drawn);
-    setMintedTotal(getCards().length);
-    setPhase('opening');
+  };
+
+  useEffect(() => {
+    loadStats();
+  }, []);
+
+  const packsRemaining = stats.totalPacks - stats.openedPacks;
+  const canMint = !loading && packsRemaining > 0 && !minting;
+
+  const handlePackSelected = async (idx: number) => {
+    if (minting) return;
+    setError(null);
+    setMinting(true);
+
+    try {
+      const { data, error: invokeError } = await supabase.functions.invoke('open-pack', {
+        body: {},
+      });
+
+      if (invokeError) {
+        console.error('open-pack invoke error', invokeError);
+        setError(invokeError.message || 'Failed to open pack. Please try again.');
+        setMinting(false);
+        return;
+      }
+
+      const payload = data as { cards?: DbNftCard[]; error?: string } | null;
+      if (!payload || payload.error || !payload.cards?.length) {
+        setError(payload?.error ?? 'No cards returned. Please try again.');
+        setMinting(false);
+        return;
+      }
+
+      const cards = payload.cards.map(dbCardToNft);
+      setPickedPackIdx(idx);
+      setDrawnCards(cards);
+      setPhase('opening');
+      // Refresh stats in the background
+      loadStats();
+    } catch (e: unknown) {
+      console.error('open-pack failed', e);
+      setError(e instanceof Error ? e.message : 'Unexpected error opening pack');
+    } finally {
+      setMinting(false);
+    }
   };
 
   const reset = () => {
@@ -63,9 +119,9 @@ const MintPage = () => {
       {/* Stats bar */}
       <div className="w-full max-w-[860px] mx-auto mb-6 grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
         {[
-          { label: 'Packs Left', value: `${packsRemaining.toLocaleString()} / ${totalPacks.toLocaleString()}` },
-          { label: 'Cards / Pack', value: config.cardsPerPack.toString() },
-          { label: 'Total Minted', value: mintedTotal.toLocaleString() },
+          { label: 'Packs Left', value: `${packsRemaining.toLocaleString()} / ${stats.totalPacks.toLocaleString()}` },
+          { label: 'Cards / Pack', value: stats.cardsPerPack.toString() },
+          { label: 'Total Minted', value: stats.totalMinted.toLocaleString() },
           { label: 'Price', value: 'Free' },
         ].map((row) => (
           <div
@@ -99,8 +155,18 @@ const MintPage = () => {
         </div>
       )}
 
-      {/* Sold out / no templates */}
-      {!canMint && (
+      {/* Loading */}
+      {loading && (
+        <div className="w-full max-w-[420px] mx-auto mb-6 p-4 rounded-xl text-center"
+             style={{ background: 'var(--cf-surface)', border: '1px solid var(--cf-border)' }}>
+          <p className="font-body text-xs" style={{ color: 'var(--cf-muted2)' }}>
+            Loading collection…
+          </p>
+        </div>
+      )}
+
+      {/* Sold out */}
+      {!loading && packsRemaining <= 0 && (
         <div
           className="w-full max-w-[420px] mx-auto mb-6 p-4 rounded-xl text-center animate-card-enter"
           style={{ background: 'var(--cf-surface)', border: '1px solid var(--cf-border)' }}
@@ -109,11 +175,9 @@ const MintPage = () => {
             Mint Unavailable
           </p>
           <p className="font-body text-xs" style={{ color: 'var(--cf-muted2)' }}>
-            {templates.length === 0
-              ? 'No card templates have been created yet. Check back soon.'
-              : packsRemaining <= 0
-                ? 'All packs have been opened!'
-                : `Not enough cards in the pool (${cardsAvailable} left).`}
+            {stats.totalPacks === 0
+              ? 'No packs have been seeded yet. Check back soon.'
+              : 'All packs have been opened!'}
           </p>
         </div>
       )}
@@ -123,7 +187,8 @@ const MintPage = () => {
         <PackGrid
           onPackSelected={handlePackSelected}
           packsRemaining={packsRemaining}
-          totalPacks={totalPacks}
+          totalPacks={stats.totalPacks}
+          disabled={minting}
         />
       )}
 
