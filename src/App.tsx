@@ -7,6 +7,7 @@ import { StacksAuthProvider } from "@/contexts/StacksAuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index.tsx";
 import Admin from "./pages/Admin.tsx";
+import Auth from "./pages/Auth.tsx";
 import Gallery from "./pages/Gallery.tsx";
 import Mint from "./pages/Mint.tsx";
 import Trading from "./pages/Trading.tsx";
@@ -23,6 +24,7 @@ const App = () => (
         <StacksAuthProvider>
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/auth" element={<Auth />} />
             <Route
               path="/gallery"
               element={
