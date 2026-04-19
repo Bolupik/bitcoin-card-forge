@@ -1,12 +1,12 @@
 import ParticleField from '@/components/ParticleField';
-import WhitelistPage from '@/components/WhitelistPage';
+import LandingPage from '@/components/LandingPage';
 
 const Index = () => {
   return (
     <div className="min-h-screen">
       <ParticleField />
       <div className="relative z-10">
-        <WhitelistPage />
+        <LandingPage />
       </div>
     </div>
   );
