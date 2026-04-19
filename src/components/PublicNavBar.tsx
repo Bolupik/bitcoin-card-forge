@@ -1,4 +1,6 @@
+import { useEffect, useRef, useState } from 'react';
 import { AppPage } from '@/lib/cardforge';
+import { useStacksAuth } from '@/contexts/StacksAuthContext';
 
 interface PublicNavBarProps {
   activePage: AppPage;
@@ -7,6 +9,22 @@ interface PublicNavBarProps {
 }
 
 const PublicNavBar = ({ activePage, onNavigate, tradeCount }: PublicNavBarProps) => {
+  const { isAuthenticated, userData, isLoading, signIn, signOut, truncateAddress } = useStacksAuth();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onClick);
+    return () => document.removeEventListener('mousedown', onClick);
+  }, [menuOpen]);
+
+  const walletLabel = userData?.bnsName ?? (userData?.address ? truncateAddress(userData.address) : '');
   const tabs: { page: AppPage; label: string; icon?: string; mobileLabel?: string }[] = [
     { page: 'gallery', label: 'Gallery', icon: '🎴', mobileLabel: '🎴' },
     { page: 'mint', label: 'Mint', icon: '⚡', mobileLabel: '⚡' },
