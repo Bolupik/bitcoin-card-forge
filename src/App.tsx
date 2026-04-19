@@ -8,6 +8,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index.tsx";
 import Admin from "./pages/Admin.tsx";
 import Auth from "./pages/Auth.tsx";
+import Account from "./pages/Account.tsx";
 import Gallery from "./pages/Gallery.tsx";
 import Mint from "./pages/Mint.tsx";
 import Trading from "./pages/Trading.tsx";
@@ -46,6 +47,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Trading />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/account"
+              element={
+                <ProtectedRoute>
+                  <Account />
                 </ProtectedRoute>
               }
             />

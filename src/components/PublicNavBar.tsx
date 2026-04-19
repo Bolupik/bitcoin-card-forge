@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AppPage } from '@/lib/cardforge';
 import { useStacksAuth } from '@/contexts/StacksAuthContext';
 
@@ -10,6 +11,7 @@ interface PublicNavBarProps {
 
 const PublicNavBar = ({ activePage, onNavigate, tradeCount }: PublicNavBarProps) => {
   const { isAuthenticated, userData, isLoading, signIn, signOut, truncateAddress } = useStacksAuth();
+  const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -148,6 +150,17 @@ const PublicNavBar = ({ activePage, onNavigate, tradeCount }: PublicNavBarProps)
                   </div>
                 )}
               </div>
+              <button
+                onClick={() => {
+                  setMenuOpen(false);
+                  navigate('/account');
+                }}
+                className="w-full text-left px-3 py-2.5 font-ui text-xs transition-colors hover:bg-white/5"
+                style={{ color: 'var(--cf-text)', borderBottom: '1px solid var(--cf-border)' }}
+                role="menuitem"
+              >
+                👤 My Account
+              </button>
               <button
                 onClick={() => {
                   setMenuOpen(false);
